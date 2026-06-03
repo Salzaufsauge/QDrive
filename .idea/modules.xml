@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/QDrive.iml" filepath="$PROJECT_DIR$/.idea/QDrive.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/qdrive.iml" filepath="$PROJECT_DIR$/.idea/qdrive.iml" />
     </modules>
   </component>
 </project>
