@@ -16,7 +16,8 @@ TOML_PATH = Path(__file__).parent / "pyproject.toml"
 
 def set_torch_index(index_name: str) -> None:
     content = TOML_PATH.read_text(encoding="utf-8")
-    TOML_PATH.write_text(re.sub(r"pytorch-\w+", index_name, content), encoding="utf-8")
+    updated = re.sub(r'(index\s*=\s*")pytorch-\w+(")', rf"\g<1>{index_name}\g<2>", content)
+    TOML_PATH.write_text(updated, encoding="utf-8")
     print(f"PyTorch Index gesetzt auf: {index_name}")
 
 def amd_on_linux() -> bool:
