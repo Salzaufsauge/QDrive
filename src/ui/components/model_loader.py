@@ -2,6 +2,7 @@ from pathlib import Path
 
 import gradio as gr
 
+
 class ModelLoader:
     def __init__(self, model_path: Path | str = "."):
         self.model_path = model_path

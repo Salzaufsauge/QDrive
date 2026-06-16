@@ -3,7 +3,6 @@ from pathlib import Path
 
 import gradio as gr
 import seaborn as sb
-
 from stable_baselines3.common.env_util import make_vec_env
 
 from ui.components.model_loader import ModelLoader
@@ -14,8 +13,9 @@ from util.inspection_helper import make_ui_for_param, get_policies_from_algo, lo
 def toggle_options(show):
     return gr.update(visible=show)
 
+
 class TrainingTab:
-    def __init__(self, model_path: Path | str = ".",):
+    def __init__(self, model_path: Path | str = ".", ):
         self.model_path = model_path
         self.running = False
         self.algorithms = load_algorithms()
@@ -28,7 +28,6 @@ class TrainingTab:
 
         try:
             while self.running:
-
                 yield [
                     gr.update(visible=False),
                     gr.update(visible=True),
@@ -58,7 +57,6 @@ class TrainingTab:
             gr.update(visible=False),
             gr.update(visible=True),
         ]
-
 
     def build(self):
         with gr.Tab("Train"):
@@ -127,4 +125,3 @@ class TrainingTab:
 
             train.click(self.start_training, inputs=env_params + model_params, outputs=[train, stop, console, graph])
             stop.click(self.stop_training, outputs=[stop, train])
-

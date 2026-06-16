@@ -37,5 +37,3 @@ class EvalTab:
 
             train.click(self.start_eval, outputs=[train, stop])
             stop.click(self.stop_eval, outputs=[stop, train])
-
-

@@ -4,6 +4,7 @@ import pkgutil
 import types
 import typing
 from typing import get_origin
+
 import gradio as gr
 import stable_baselines3 as sb3
 from stable_baselines3.common.base_class import BaseAlgorithm
@@ -15,6 +16,7 @@ def iter_modules(package):
             package.__path__, package.__name__ + "."
     ):
         yield modname
+
 
 def make_ui_for_param(param):
     ann = unwrap_optional(param.annotation)
@@ -40,6 +42,7 @@ def make_ui_for_param(param):
         return gr.Textbox(label=param.name, value=param.default)
 
     return gr.Textbox(label=f"{param.name} (unknown type)", value=param.default)
+
 
 def load_algorithms():
     algos = {}
