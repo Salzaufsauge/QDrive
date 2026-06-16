@@ -34,7 +34,7 @@ def make_ui_for_param(param):
         return gr.Checkbox(label=param.name, value=param.default)
 
     if origin is dict:
-        return gr.JSON(label=param.name, value=param.default)
+        return gr.Dataframe(label=param.name, value=param.default, headers=["key", "value"], type="array")
 
     if origin is typing.Callable:
         return gr.Textbox(label=param.name, value=param.default)

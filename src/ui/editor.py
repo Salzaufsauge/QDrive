@@ -8,7 +8,7 @@ from ui.components.training_tab import TrainingTab
 class Editor:
     def __init__(self, model_path: Path | str = "."):
         self.training_tab = TrainingTab(model_path=model_path)
-        self.eval_tab = EvalTab()
+        self.eval_tab = EvalTab(model_path=model_path)
         self.model_path = model_path
 
     def launch(self):
