@@ -103,8 +103,8 @@ class TrainingTab:
                             with gr.Row():
                                 for param in params[i:i + 3]:
                                     if param.name == "policy":
-                                        temp.append(gr.Dropdown(value="MlpPolicy", choices=get_policies_from_algo(
-                                            self.algorithms[algo]).keys(), label=param.name))
+                                        policy = get_policies_from_algo(self.algorithms[algo]).keys()
+                                        temp.append(gr.Dropdown(choices=policy, label=param.name))
                                         continue
                                     if param.name == "env": continue
                                     temp.append(make_ui_for_param(param))

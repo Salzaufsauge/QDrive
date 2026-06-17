@@ -30,7 +30,7 @@ class EvalTab:
 
             env_id = gr.Dropdown(value="CarRacing-v3", choices=get_envs(), label="Environment")
 
-            train = gr.Button("Train")
+            train = gr.Button("Evaluate")
             stop = gr.Button("Stop", visible=False)
 
             gr.Image(interactive=False, streaming=True, type="pil", label="Output")
