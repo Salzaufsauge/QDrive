@@ -1,0 +1,21 @@
+from backend.configuration import Configuration
+from backend.evaluate import Evaluate
+from backend.train import Train
+
+
+class Controller:
+    def __init__(self):
+        self.training = Train()
+        self.eval = Evaluate()
+
+    def start_training(self, config: Configuration):
+        yield from self.training.train(config)
+
+    def stop_training(self):
+        self.training.stop()
+
+    def start_eval(self, config: Configuration):
+        yield from self.eval.evaluate(config)
+
+    def stop_eval(self):
+        self.eval.stop()

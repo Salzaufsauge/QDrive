@@ -8,6 +8,8 @@ from typing import get_origin
 import gradio as gr
 import stable_baselines3 as sb3
 from stable_baselines3.common.base_class import BaseAlgorithm
+from stable_baselines3.common.off_policy_algorithm import OffPolicyAlgorithm
+from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
 from stable_baselines3.common.policies import BasePolicy
 
 
@@ -24,24 +26,25 @@ def make_ui_for_param(param):
     origin = get_origin(ann)
 
     if ann is str:
-        return gr.Textbox(label=param.name, value=param.default)
+        return gr.Textbox(label=param.name, value=param.default, interactive=True)
 
     if ann is int:
-        return gr.Number(label=param.name, value=param.default)
+        return gr.Number(label=param.name, value=param.default, interactive=True)
 
     if ann is float:
-        return gr.Number(label=param.name, value=param.default)
+        return gr.Number(label=param.name, value=param.default, interactive=True)
 
     if ann is bool:
-        return gr.Checkbox(label=param.name, value=param.default)
+        return gr.Checkbox(label=param.name, value=param.default, interactive=True)
 
     if origin is dict:
-        return gr.Dataframe(label=param.name, value=param.default, headers=["key", "value"], type="array")
+        return gr.Dataframe(label=param.name, value=param.default, headers=["key", "value"], type="array",
+                            interactive=True)
 
     if origin is typing.Callable:
-        return gr.Textbox(label=param.name, value=param.default)
+        return gr.Textbox(label=param.name, value=param.default, interactive=True)
 
-    return gr.Textbox(label=f"{param.name} (unknown type)", value=param.default)
+    return gr.Textbox(label=f"{param.name} (unknown type)", value=param.default, interactive=True)
 
 
 def load_algorithms():
@@ -57,6 +60,8 @@ def load_algorithms():
             if (
                     issubclass(obj, BaseAlgorithm)
                     and obj is not BaseAlgorithm
+                    and obj is not OffPolicyAlgorithm
+                    and obj is not OnPolicyAlgorithm
             ):
                 algos[name] = obj
 
