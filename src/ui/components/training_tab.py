@@ -25,7 +25,7 @@ def __build_config__(params, sig_params):
         if val is not None:
             if key.endswith("kwargs"):
                 for row in val:
-                    temp[key] = {row[0]: row[1]}
+                    temp[key] = temp[key] | {row[0]: row[1]}
             else:
                 temp[key] = val
     return temp
@@ -43,6 +43,8 @@ class TrainingTab:
         conf = dict()
         params = list(params)
         model_path = params.pop(0)
+        if model_path is not None:
+            return
         conf["env_param"] = dict()
         env_params = inspect.signature(make_vec_env).parameters
         conf["env_param"] = conf["env_param"] | __build_config__(params, env_params)
@@ -56,7 +58,7 @@ class TrainingTab:
         conf["model_param"] = conf["model_param"] | __build_config__(params, model_params)
         conf["total_timesteps"] = params.pop(0)
         conf[
-            "model_path"] = model_path if model_path is not None else f"models/{conf["env_param"]["env_id"]}/{conf['algorithm']}/model-{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.zip"
+            "model_path"] = f"models/{conf["env_param"]["env_id"]}/{conf['algorithm']}/model-{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.zip"
         conf = replace_empty_strings(conf)
         self.config.config = conf
 

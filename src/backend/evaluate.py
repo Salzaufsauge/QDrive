@@ -19,9 +19,8 @@ class Evaluate:
         env = make_vec_env(**env_param)
         if config.config.get("vec_frame_stack").get("enabled"):
             env = VecFrameStack(env, config.config.get("vec_frame_stack").get("n_stack"))
-        model_param = config.config.get("model_param")
-        model = self.algorithms.get(config.config.get("algorithm"))(env=env, policy=model_param.get("policy")).load(
-            get_project_root() / config.config.get("model_path"))
+        model = self.algorithms.get(config.config.get("algorithm")).load(
+            get_project_root() / config.config.get("model_path"), env=env)
         obs = env.reset()
 
         while self.running:

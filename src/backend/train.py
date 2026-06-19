@@ -1,5 +1,6 @@
 import copy
 import datetime
+import threading
 import time
 from collections import deque
 
@@ -16,15 +17,15 @@ from util.utils import get_project_root, get_vec_env_class
 
 class Train:
     def __init__(self):
-        self.running = False
+        self.running = threading.Event()
         self.algorithms = load_algorithms()
         self.config = None
         self.model = None
         self.state = None
 
     def train(self, config):
-        self.running = True
-        self.state = Train.TrainState()
+        self.running.set()
+        self.state = TrainState()
         self.config = copy.deepcopy(config)
 
         self.state.log("INFO", "Starting training")
@@ -42,7 +43,7 @@ class Train:
             else:
                 self.model = model_class(env=env, **model_param)
 
-            callback = Train.StreamingCallback(self, self.state)
+            callback = StreamingCallback(self, self.state)
 
             self.model.learn(total_timesteps=config.config.get("total_timesteps"), callback=callback)
             self.state.log("INFO", "Training finished")
@@ -50,81 +51,80 @@ class Train:
             self.state.log("ERROR", f"Training failed: {e}")
         finally:
             env.close()
-            self.running = False
+            self.running.clear()
 
     def stop(self):
         self.state.log("INFO", "Stopping training")
-        self.running = False
-
-    def reward_fig(self):
-        fig, ax = plt.subplots()
-
-        if self.state.episodes:
-            df = pl.DataFrame(self.state.episodes)
-            sb.lineplot(
-                data=df,
-                x="timesteps",
-                y="reward",
-                ax=ax,
-            )
-
-        return fig
+        self.running.clear()
 
     def get_state(self):
-        while not self.running:
-            time.sleep(0.05)
-        while self.running:
+        self.running.wait()
+        while self.running.is_set():
             yield [
                 "\n".join(self.state.get_logs()),
-                self.reward_fig()
+                self.state.reward_fig()
             ]
-            time.sleep(1.0)
+            time.sleep(10.0)
         yield [
             "\n".join(self.state.get_logs()),
-            self.reward_fig()
+            self.state.reward_fig()
         ]
 
 
-    class TrainState:
-        def __init__(self):
-            self.logs = deque(maxlen=1000)
-            self.episodes = []
+class TrainState:
+    def __init__(self):
+        self.logs = deque(maxlen=1000)
+        self.episodes = deque(maxlen=10_000)
+        self.lock = threading.Lock()
 
-        def log(self, level: str, message: str):
+    def log(self, level: str, message: str):
+        with self.lock:
             self.logs.append({
                 "time": datetime.datetime.now().strftime("%H:%M:%S"),
                 "level": level,
                 "message": message,
             })
 
-        def get_logs(self):
-            ret = []
-            for log in self.logs:
-                ret.append(f"{log['time']} - {log['level']} - {log['message']} ")
-            return ret
+    def reward_fig(self):
+        fig, ax = plt.subplots()
+        with self.lock:
+            if self.episodes:
+                df = pl.DataFrame(self.episodes)
+                sb.lineplot(
+                    data=df,
+                    x="timesteps",
+                    y="reward",
+                    ax=ax,
+                )
+        return fig
 
-    class StreamingCallback(BaseCallback):
-        def __init__(self, trainer, state, verbose=0):
-            super().__init__(verbose)
-            self.trainer = trainer
-            self.state = state
-            self.best_reward = -float("inf")
+    def get_logs(self):
+        with self.lock:
+            return [f"{log['time']} - {log['level']} - {log['message']} " for log in self.logs]
 
-        def _on_step(self) -> bool:
-            infos = self.locals.get("infos", [])
-            for info in infos:
-                if "episode" in info:
-                    log = {
-                        "timesteps": self.num_timesteps,
-                        "reward": info["episode"]["r"],
-                        "length": info["episode"]["l"],
-                    }
-                    self.state.log("INFO",
-                                   f"Episode finished after {log['timesteps']} timesteps with reward {log['reward']}.")
+
+class StreamingCallback(BaseCallback):
+    def __init__(self, trainer, state, verbose=0):
+        super().__init__(verbose)
+        self.trainer = trainer
+        self.state = state
+        self.best_reward = -float("inf")
+
+    def _on_step(self) -> bool:
+        infos = self.locals.get("infos", [])
+        for info in infos:
+            if "episode" in info:
+                log = {
+                    "timesteps": self.num_timesteps,
+                    "reward": info["episode"]["r"],
+                    "length": info["episode"]["l"],
+                }
+                self.state.log("INFO",
+                               f"Episode finished after {log['timesteps']} timesteps with reward {log['reward']}.")
+                with self.state.lock:
                     self.state.episodes.append(log)
-                    if self.best_reward < log["reward"]:
-                        self.state.log("INFO", f"New best reward: {log['reward']}")
-                        self.best_reward = max(self.best_reward, log["reward"])
-                        self.trainer.config.save_model(self.trainer.model)
-
-            return self.trainer.running
+                if self.best_reward < log["reward"]:
+                    self.state.log("INFO", f"New best reward: {log['reward']}")
+                    self.best_reward = max(self.best_reward, log["reward"])
+                    self.trainer.config.save_model(self.trainer.model)
+        return self.trainer.running.is_set()
