@@ -1,5 +1,6 @@
 import importlib
 import inspect
+import numbers
 import pkgutil
 import types
 import typing
@@ -43,6 +44,9 @@ def make_ui_for_param(param):
 
     if origin is typing.Callable:
         return gr.Textbox(label=param.name, value=param.default, interactive=True)
+
+    if isinstance(param.default, numbers.Number):
+        return gr.Number(label=param.name, value=param.default, interactive=True)
 
     return gr.Textbox(label=f"{param.name} (unknown type)", value=param.default, interactive=True)
 

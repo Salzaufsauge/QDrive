@@ -3,7 +3,7 @@ from stable_baselines3.common.vec_env import VecFrameStack
 
 from backend.configuration import Configuration
 from util.inspection_helper import load_algorithms
-from util.utils import get_vec_env_class
+from util.utils import get_vec_env_class, get_project_root
 
 
 class Evaluate:
@@ -21,7 +21,7 @@ class Evaluate:
             env = VecFrameStack(env, config.config.get("vec_frame_stack").get("n_stack"))
         model_param = config.config.get("model_param")
         model = self.algorithms.get(config.config.get("algorithm"))(env=env, policy=model_param.get("policy")).load(
-            config.config.get("model_path"))
+            get_project_root() / config.config.get("model_path"))
         obs = env.reset()
 
         while self.running:

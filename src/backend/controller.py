@@ -9,7 +9,7 @@ class Controller:
         self.eval = Evaluate()
 
     def start_training(self, config: Configuration):
-        yield from self.training.train(config)
+        return self.training.train(config)
 
     def stop_training(self):
         self.training.stop()
@@ -19,3 +19,6 @@ class Controller:
 
     def stop_eval(self):
         self.eval.stop()
+
+    def get_training_state(self):
+        yield from self.training.get_state()

@@ -1,6 +1,9 @@
+import copy
+import datetime
+import time
 from collections import deque
-from pathlib import Path
 
+import matplotlib.pyplot as plt
 import polars as pl
 import seaborn as sb
 from stable_baselines3.common.callbacks import BaseCallback
@@ -15,44 +18,95 @@ class Train:
     def __init__(self):
         self.running = False
         self.algorithms = load_algorithms()
+        self.config = None
         self.model = None
+        self.state = None
 
     def train(self, config):
         self.running = True
-        state = Train.TrainState()
+        self.state = Train.TrainState()
+        self.config = copy.deepcopy(config)
 
-        env_param = config.config.get("env_param")
-        env_param["vec_env_cls"] = get_vec_env_class(env_param["vec_env_cls"])
-        env = make_vec_env(**env_param)
-        if config.config.get("vec_frame_stack").get("enabled"):
-            env = VecFrameStack(env, config.config.get("vec_frame_stack").get("n_stack"))
-        model_param = config.config.get("model_param")
-        model_class = self.algorithms.get(config.config.get("algorithm"))
-        if Path(get_project_root() / config.config.get("model_path")).exists():
-            model = model_class(env=env, policy=model_param["policy"]).load(config.config.get("model_path"))
-        else:
-            model = model_class(env=env, **model_param)
+        self.state.log("INFO", "Starting training")
+        try:
+            env_param = config.config.get("env_param")
+            env_param["vec_env_cls"] = get_vec_env_class(env_param["vec_env_cls"])
+            env = make_vec_env(**env_param)
+            if config.config.get("vec_frame_stack").get("enabled"):
+                env = VecFrameStack(env, config.config.get("vec_frame_stack").get("n_stack"))
+            model_param = config.config.get("model_param")
+            model_class = self.algorithms.get(config.config.get("algorithm"))
+            if (get_project_root() / config.config.get("model_path")).exists():
+                self.model = model_class.load(env=env, path=get_project_root() / config.config.get("model_path"))
+            else:
+                self.model = model_class(env=env, **model_param)
 
-        callback = Train.StreamingCallback(self, state)
+            callback = Train.StreamingCallback(self, self.state)
 
-        model.learn(total_timesteps=config.config.get("total_timesteps"), callback=callback)
-        df = pl.DataFrame(state.episodes)
-        fig = sb.lineplot(x="timesteps", y="reward", data=df).get_figure()
-        yield "Finished training.", fig
+            self.model.learn(total_timesteps=config.config.get("total_timesteps"), callback=callback)
+            self.state.log("INFO", "Training finished")
+        except Exception as e:
+            self.state.log("ERROR", f"Training failed: {e}")
+        finally:
+            self.running = False
 
     def stop(self):
+        self.state.log("INFO", "Stopping training")
         self.running = False
+
+    def reward_fig(self):
+        fig, ax = plt.subplots()
+
+        if self.state.episodes:
+            df = pl.DataFrame(self.state.episodes)
+            sb.lineplot(
+                data=df,
+                x="timesteps",
+                y="reward",
+                ax=ax,
+            )
+
+        return fig
+
+    def get_state(self):
+        while not self.running:
+            time.sleep(0.05)
+        while self.running:
+            yield [
+                "\n".join(self.state.get_logs()),
+                self.reward_fig()
+            ]
+            time.sleep(1.0)
+        yield [
+            "\n".join(self.state.get_logs()),
+            self.reward_fig()
+        ]
+
 
     class TrainState:
         def __init__(self):
             self.logs = deque(maxlen=1000)
             self.episodes = []
 
+        def log(self, level: str, message: str):
+            self.logs.append({
+                "time": datetime.datetime.now().strftime("%H:%M:%S"),
+                "level": level,
+                "message": message,
+            })
+
+        def get_logs(self):
+            ret = []
+            for log in self.logs:
+                ret.append(f"{log['time']} - {log['level']} - {log['message']} ")
+            return ret
+
     class StreamingCallback(BaseCallback):
         def __init__(self, trainer, state, verbose=0):
             super().__init__(verbose)
             self.trainer = trainer
             self.state = state
+            self.best_reward = -float("inf")
 
         def _on_step(self) -> bool:
             infos = self.locals.get("infos", [])
@@ -63,6 +117,12 @@ class Train:
                         "reward": info["episode"]["r"],
                         "length": info["episode"]["l"],
                     }
-                    self.state.logs.append(log)
+                    self.state.log("INFO",
+                                   f"Episode finished after {log['timesteps']} timesteps with reward {log['reward']}.")
                     self.state.episodes.append(log)
+                    if self.best_reward < log["reward"]:
+                        self.state.log("INFO", f"New best reward: {log['reward']}")
+                        self.best_reward = max(self.best_reward, log["reward"])
+                        self.trainer.config.save_model(self.trainer.model)
+
             return self.trainer.running

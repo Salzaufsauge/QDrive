@@ -1,5 +1,6 @@
 import datetime
 import inspect
+import threading
 from pathlib import Path
 
 import gradio as gr
@@ -17,6 +18,19 @@ def toggle_options(show):
     return gr.update(visible=show)
 
 
+def __build_config__(params, sig_params):
+    temp = dict()
+    for key in sig_params.keys():
+        val = params.pop(0)
+        if val is not None:
+            if key.endswith("kwargs"):
+                for row in val:
+                    temp[key] = {row[0]: row[1]}
+            else:
+                temp[key] = val
+    return temp
+
+
 class TrainingTab:
     def __init__(self, controller: Controller, model_path: Path | str = ".", ):
         self.controller = controller
@@ -25,43 +39,37 @@ class TrainingTab:
         self.running = False
         self.algorithms = load_algorithms()
 
-    def __build_config__(self, params, sig_params):
-        temp = dict()
-        for key in sig_params.keys():
-            val = params.pop(0)
-            if val is not None:
-                if key.endswith("kwargs"):
-                    if len(val) > 0:
-                        temp[key] = {val[0]: val[1]}
-                else:
-                    temp[key] = val
-        return temp
-
     def setup_config(self, *params):
         conf = dict()
         params = list(params)
         model_path = params.pop(0)
         conf["env_param"] = dict()
         env_params = inspect.signature(make_vec_env).parameters
-        conf["env_param"] = conf["env_param"] | self.__build_config__(params, env_params)
+        conf["env_param"] = conf["env_param"] | __build_config__(params, env_params)
         conf["vec_frame_stack"] = dict()
         conf["vec_frame_stack"]["enabled"] = params.pop(0)
         vec_frame_stack_params = inspect.signature(VecFrameStack).parameters
-        conf["vec_frame_stack"] = conf["vec_frame_stack"] | self.__build_config__(params, vec_frame_stack_params)
+        conf["vec_frame_stack"] = conf["vec_frame_stack"] | __build_config__(params, vec_frame_stack_params)
         conf["model_param"] = dict()
         conf["algorithm"] = params.pop(0)
         model_params = inspect.signature(self.algorithms[conf["algorithm"]]).parameters
-        conf["model_param"] = conf["model_param"] | self.__build_config__(params, model_params)
+        conf["model_param"] = conf["model_param"] | __build_config__(params, model_params)
         conf["total_timesteps"] = params.pop(0)
         conf[
             "model_path"] = model_path if model_path is not None else f"models/{conf["env_param"]["env_id"]}/{conf['algorithm']}/model-{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.zip"
         conf = replace_empty_strings(conf)
         self.config.config = conf
-        print(self.config.config)
 
     def start_training(self):
-        yield from self.controller.start_training(self.config)
+        thread = threading.Thread(
+            target=self.controller.start_training,
+            args=(self.config,),
+            daemon=True,
+        )
+        thread.start()
 
+    def get_training_state(self):
+        yield from self.controller.get_training_state()
 
     def stop_training(self):
         self.controller.stop_training()
@@ -75,7 +83,7 @@ class TrainingTab:
         return gr.update(visible=True, value=f"Model {model_path} loaded")
 
     def build(self):
-        with (((gr.Tab("Train")))):
+        with gr.Tab("Train"):
             env_params = []
             model_params = []
 
@@ -147,8 +155,8 @@ class TrainingTab:
                         train.click(self.setup_config, inputs=[model_loader.model] + env_params + model_params,
                                     ).then(lambda: (gr.update(visible=False), gr.update(visible=True)),
                                            outputs=[train, stop]
-                                           ).then(self.start_training, outputs=[console, graph])
-
+                                           ).then(self.start_training).then(self.get_training_state,
+                                                                            outputs=[console, graph])
 
             train = gr.Button("Train")
             stop = gr.Button("Stop", visible=False)
@@ -164,5 +172,5 @@ class TrainingTab:
 
             train.click(self.setup_config, inputs=[model_loader.model] + env_params + model_params,
                         ).then(lambda: (gr.update(visible=False), gr.update(visible=True)), outputs=[train, stop]
-                               ).then(self.start_training, outputs=[console, graph])
+                               ).then(self.start_training).then(self.get_training_state, outputs=[console, graph])
             stop.click(self.stop_training, outputs=[stop, train])
