@@ -28,12 +28,13 @@ class Train:
         self.config = copy.deepcopy(config)
 
         self.state.log("INFO", "Starting training")
+        env_param = config.config.get("env_param")
+        env_param["vec_env_cls"] = get_vec_env_class(env_param["vec_env_cls"])
+        env = make_vec_env(**env_param)
+        if config.config.get("vec_frame_stack").get("enabled"):
+            env = VecFrameStack(env, config.config.get("vec_frame_stack").get("n_stack"))
+
         try:
-            env_param = config.config.get("env_param")
-            env_param["vec_env_cls"] = get_vec_env_class(env_param["vec_env_cls"])
-            env = make_vec_env(**env_param)
-            if config.config.get("vec_frame_stack").get("enabled"):
-                env = VecFrameStack(env, config.config.get("vec_frame_stack").get("n_stack"))
             model_param = config.config.get("model_param")
             model_class = self.algorithms.get(config.config.get("algorithm"))
             if (get_project_root() / config.config.get("model_path")).exists():
@@ -44,11 +45,11 @@ class Train:
             callback = Train.StreamingCallback(self, self.state)
 
             self.model.learn(total_timesteps=config.config.get("total_timesteps"), callback=callback)
-            env.close()
             self.state.log("INFO", "Training finished")
         except Exception as e:
             self.state.log("ERROR", f"Training failed: {e}")
         finally:
+            env.close()
             self.running = False
 
     def stop(self):
