@@ -44,6 +44,7 @@ class Train:
             callback = Train.StreamingCallback(self, self.state)
 
             self.model.learn(total_timesteps=config.config.get("total_timesteps"), callback=callback)
+            env.close()
             self.state.log("INFO", "Training finished")
         except Exception as e:
             self.state.log("ERROR", f"Training failed: {e}")
