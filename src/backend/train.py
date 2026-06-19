@@ -20,7 +20,6 @@ class Train:
         self.running = threading.Event()
         self.algorithms = load_algorithms()
         self.config = None
-        self.model = None
         self.state = None
 
     def train(self, config):
@@ -39,13 +38,13 @@ class Train:
             model_param = config.config.get("model_param")
             model_class = self.algorithms.get(config.config.get("algorithm"))
             if (get_project_root() / config.config.get("model_path")).exists():
-                self.model = model_class.load(env=env, path=get_project_root() / config.config.get("model_path"))
+                model = model_class.load(env=env, path=get_project_root() / config.config.get("model_path"))
             else:
-                self.model = model_class(env=env, **model_param)
+                model = model_class(env=env, **model_param)
 
             callback = StreamingCallback(self, self.state)
 
-            self.model.learn(total_timesteps=config.config.get("total_timesteps"), callback=callback)
+            model.learn(total_timesteps=config.config.get("total_timesteps"), callback=callback)
             self.state.log("INFO", "Training finished")
         except Exception as e:
             self.state.log("ERROR", f"Training failed: {e}")
@@ -126,5 +125,5 @@ class StreamingCallback(BaseCallback):
                 if self.best_reward < log["reward"]:
                     self.state.log("INFO", f"New best reward: {log['reward']}")
                     self.best_reward = max(self.best_reward, log["reward"])
-                    self.trainer.config.save_model(self.trainer.model)
+                    self.trainer.config.save_model(self.model)
         return self.trainer.running.is_set()
