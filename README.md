@@ -118,8 +118,11 @@ Dependencies are managed using `uv`.
 
 ### Install
 
+See the [Setup Guide](docs/setup.md) for full instructions. The setup script detects your GPU
+and installs the matching PyTorch build automatically:
+
 ```bash
-uv sync
+python setup_env.py
 ```
 
 ---
