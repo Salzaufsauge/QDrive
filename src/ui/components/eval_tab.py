@@ -12,9 +12,10 @@ class EvalTab:
         self.controller = controller
         self.config = Configuration()
         self.model_path = model_path
-        self.running = False
 
     def start_eval(self):
+        if self.config.config is None:
+            gr.Error("No model loaded")
         yield from self.controller.start_eval(self.config)
 
     def stop_eval(self):
