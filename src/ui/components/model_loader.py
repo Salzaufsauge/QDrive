@@ -4,7 +4,7 @@ import gradio as gr
 
 
 class ModelLoader:
-    def __init__(self, model_path: Path | str = "."):
+    def __init__(self, model_path: Path):
         self.load_label = None
         self.load_btn = None
         self.model = None
