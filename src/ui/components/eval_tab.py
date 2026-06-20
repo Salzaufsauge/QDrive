@@ -8,7 +8,7 @@ from ui.components.model_loader import ModelLoader
 
 
 class EvalTab:
-    def __init__(self, controller: Controller, model_path: Path | str = ".", ):
+    def __init__(self, controller: Controller, model_path: Path):
         self.controller = controller
         self.config = Configuration()
         self.model_path = model_path
@@ -37,7 +37,7 @@ class EvalTab:
             eval_btn = gr.Button("Evaluate")
             stop_btn = gr.Button("Stop", visible=False)
 
-            output = gr.Image(interactive=False, streaming=True, type="pil", label="Output")
+            output = gr.Image(interactive=False, streaming=True, type="numpy", label="Output")
 
             eval_btn.click(lambda: (gr.update(visible=False), gr.update(visible=True)),
                            outputs=[eval_btn, stop_btn]).then(self.start_eval, outputs=output)

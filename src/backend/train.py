@@ -95,6 +95,7 @@ class TrainState:
                     y="reward",
                     ax=ax,
                 )
+        plt.close(fig)
         return fig
 
     def get_logs(self):

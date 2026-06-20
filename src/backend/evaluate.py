@@ -22,12 +22,13 @@ class Evaluate:
         model = self.algorithms.get(config.config.get("algorithm")).load(
             get_project_root() / config.config.get("model_path"), env=env)
         obs = env.reset()
-
-        while self.running:
-            action, _states = model.predict(obs, deterministic=True)
-            obs, rewards, done, info = env.step(action)
-            yield env.render("rgb_array")
-        env.close()
+        try:
+            while self.running:
+                action, _states = model.predict(obs, deterministic=True)
+                obs, rewards, done, info = env.step(action)
+                yield env.render("rgb_array")
+        finally:
+            env.close()
 
     def stop(self):
         self.running = False

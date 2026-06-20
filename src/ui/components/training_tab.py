@@ -24,15 +24,14 @@ def __build_config__(params, sig_params):
         val = params.pop(0)
         if val is not None:
             if key.endswith("kwargs"):
-                for row in val:
-                    temp[key] = temp[key] | {row[0]: row[1]}
+                temp[key] = {row[0]: row[1] for row in val if row and row[1] not in [None, ""]}
             else:
                 temp[key] = val
     return temp
 
 
 class TrainingTab:
-    def __init__(self, controller: Controller, model_path: Path | str = ".", ):
+    def __init__(self, controller: Controller, model_path: Path):
         self.controller = controller
         self.model_path = model_path
         self.config = Configuration()
@@ -44,6 +43,7 @@ class TrainingTab:
         params = list(params)
         model_path = params.pop(0)
         if model_path is not None:
+            self.config.load_model(model_path)
             return
         conf["env_param"] = dict()
         env_params = inspect.signature(make_vec_env).parameters
@@ -58,7 +58,7 @@ class TrainingTab:
         conf["model_param"] = conf["model_param"] | __build_config__(params, model_params)
         conf["total_timesteps"] = params.pop(0)
         conf[
-            "model_path"] = f"models/{conf["env_param"]["env_id"]}/{conf['algorithm']}/model-{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.zip"
+            "model_path"] = f"models/{conf['env_param']['env_id']}/{conf['algorithm']}/model-{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.zip"
         conf = replace_empty_strings(conf)
         self.config.config = conf
 
@@ -123,7 +123,7 @@ class TrainingTab:
                             with gr.Row():
                                 for param in params[i:i + 3]:
                                     if param.name == "n_stack":
-                                        frame_stack = gr.Number(label=param.name, value=4, visible=False)
+                                        frame_stack = gr.Number(label=param.name, value=param.default, visible=False)
                                         env_params.append(frame_stack)
                                     else:
                                         env_params.append(gr.Label(value=None, visible=False))
@@ -172,7 +172,4 @@ class TrainingTab:
                     )
                     graph = gr.Plot(label="Training Curve")
 
-            train.click(self.setup_config, inputs=[model_loader.model] + env_params + model_params,
-                        ).then(lambda: (gr.update(visible=False), gr.update(visible=True)), outputs=[train, stop]
-                               ).then(self.start_training).then(self.get_training_state, outputs=[console, graph])
             stop.click(self.stop_training, outputs=[stop, train])

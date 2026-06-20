@@ -18,8 +18,7 @@ class ModelLoader:
     def build_model_loader(self):
         models = [str(p.relative_to(self.model_path.parent)) for p in self.model_path.glob("**/*.zip")]
         with gr.Row(equal_height=True):
-            self.model = gr.Dropdown(label="Model", choices=models, value=None, interactive=True,
-                                     allow_custom_value=True)
+            self.model = gr.Dropdown(label="Model", choices=models, value=None, interactive=True)
             with gr.Column():
                 self.load_btn = gr.Button("Load Model")
                 self.load_label = gr.Label(value="Model Loaded", visible=False)
