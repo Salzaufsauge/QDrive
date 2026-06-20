@@ -19,10 +19,10 @@ dependencies = [
 
 [tool.uv.sources]
 torch = [
-  { index = "pytorch-cu132"},
+  { index = "pytorch-rocm"},
 ]
 torchvision = [
-  { index = "pytorch-cu132"},
+  { index = "pytorch-rocm"},
 ]
 
 [[tool.uv.index]]
@@ -38,4 +38,3 @@ explicit = true
 [[tool.uv.index]]
 name = "pytorch-rocm"
 url = "https://download.pytorch.org/whl/rocm7.2"
-explicit = true
