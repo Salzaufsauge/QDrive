@@ -53,7 +53,8 @@ class Train:
             self.running.clear()
 
     def stop(self):
-        self.state.log("INFO", "Stopping training")
+        if self.state is not None:
+            self.state.log("INFO", "Stopping training")
         self.running.clear()
 
     def get_state(self):
