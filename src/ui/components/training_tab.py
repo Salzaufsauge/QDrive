@@ -26,12 +26,9 @@ class TrainingTab:
 
     def setup_config(self, *params):
         try:
-            conf = self.config.write_config(list(params))
-            if conf is None:
-                return
+            self.config.write_config(list(params))
         except Exception as e:
             raise gr.Error(f"Error: {e}")
-        self.config.config = conf
 
     def start_training(self):
         thread = threading.Thread(

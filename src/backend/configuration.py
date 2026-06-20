@@ -42,25 +42,28 @@ class Configuration:
 
     def write_config(self, params):
         conf = dict()
-        model_path = params.pop(0)
-        if model_path is not None:
-            self.load_model(model_path)
-            return None
-        conf["env_param"] = dict()
-        env_params = inspect.signature(make_vec_env).parameters
-        conf["env_param"] = conf["env_param"] | __build_config__(params, env_params)
-        conf["vec_frame_stack"] = dict()
-        conf["vec_frame_stack"]["enabled"] = params.pop(0)
-        vec_frame_stack_params = inspect.signature(VecFrameStack).parameters
-        conf["vec_frame_stack"] = conf["vec_frame_stack"] | __build_config__(params, vec_frame_stack_params)
-        conf["model_param"] = dict()
-        conf["algorithm"] = params.pop(0)
-        model_params = inspect.signature(self.algorithms[conf["algorithm"]]).parameters
-        conf["model_param"] = conf["model_param"] | __build_config__(params, model_params)
-        conf["total_timesteps"] = params.pop(0)
-        conf[
-            "model_path"] = f"models/{conf['env_param']['env_id']}/{conf['algorithm']}/model-{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.zip"
-        return replace_empty_strings(conf)
+        try:
+            model_path = params.pop(0)
+            if model_path is not None:
+                self.load_model(model_path)
+                return
+            conf["env_param"] = dict()
+            env_params = inspect.signature(make_vec_env).parameters
+            conf["env_param"] = conf["env_param"] | __build_config__(params, env_params)
+            conf["vec_frame_stack"] = dict()
+            conf["vec_frame_stack"]["enabled"] = params.pop(0)
+            vec_frame_stack_params = inspect.signature(VecFrameStack).parameters
+            conf["vec_frame_stack"] = conf["vec_frame_stack"] | __build_config__(params, vec_frame_stack_params)
+            conf["model_param"] = dict()
+            conf["algorithm"] = params.pop(0)
+            model_params = inspect.signature(self.algorithms[conf["algorithm"]]).parameters
+            conf["model_param"] = conf["model_param"] | __build_config__(params, model_params)
+            conf["total_timesteps"] = params.pop(0)
+            conf[
+                "model_path"] = f"models/{conf['env_param']['env_id']}/{conf['algorithm']}/model-{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.zip"
+        except Exception as e:
+            raise e
+        self.config = replace_empty_strings(conf)
 
     def load_model(self, model_path: Path):
         self.config = yaml.safe_load(get_config_path(get_project_root() / model_path).read_text())
