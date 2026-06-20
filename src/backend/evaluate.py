@@ -13,7 +13,7 @@ class Evaluate:
         self.running = threading.Event()
         self.algorithms = load_algorithms()
 
-    def evaluate(self, config: Configuration):
+    def evaluate(self, config: Configuration, mode: str):
         self.running.set()
         env_param = dict(config.config.get("env_param") or {})
         env_param["n_envs"] = 1
@@ -28,7 +28,7 @@ class Evaluate:
             while self.running.is_set():
                 action, _states = model.predict(obs, deterministic=True)
                 obs, rewards, done, info = env.step(action)
-                yield env.render("rgb_array")
+                yield env.render(mode)
         finally:
             self.running.clear()
             env.close()

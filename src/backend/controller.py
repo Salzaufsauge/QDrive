@@ -14,8 +14,8 @@ class Controller:
     def stop_training(self):
         self.training.stop()
 
-    def start_eval(self, config: Configuration):
-        yield from self.eval.evaluate(config)
+    def start_eval(self, config: Configuration, mode: str = "rgb_array"):
+        yield from self.eval.evaluate(config, mode=mode)
 
     def stop_eval(self):
         self.eval.stop()
