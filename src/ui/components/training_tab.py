@@ -8,6 +8,7 @@ from stable_baselines3.common.vec_env import VecFrameStack
 
 from backend.configuration import Configuration
 from backend.controller import Controller
+from ui.components.TagComponent import TagInput
 from ui.components.model_loader import ModelLoader
 from util.inspection_helper import make_ui_for_param, get_policies_from_algo, load_algorithms
 from util.utils import get_envs
@@ -106,6 +107,8 @@ class TrainingTab:
                 with gr.Accordion("Model Parameters", open=False):
                     model_params.append(
                         gr.Dropdown(value="PPO", choices=self.algorithms.keys(), label="algorithm", interactive=True))
+                    model_params.append(TagInput())
+                    model_params.append(gr.Number(label="total_timesteps", value=1000000, interactive=True))
 
                     @gr.render(inputs=model_params[0])
                     def get_model_params(algo):
@@ -126,8 +129,7 @@ class TrainingTab:
                                         temp.append(gr.Number(label=param.name, value=param.default, interactive=True))
                                         continue
                                     temp.append(make_ui_for_param(param))
-                        temp.append(gr.Number(label="total_timesteps", value=1000000, interactive=True))
-                        model_params[1:] = temp
+                        model_params[3:] = temp
                         train.click(self.setup_config, inputs=[model_loader.model] + env_params + model_params,
                                     ).then(lambda: (gr.update(visible=False), gr.update(visible=True)),
                                            outputs=[train, stop]

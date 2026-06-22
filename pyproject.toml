@@ -7,7 +7,7 @@ dependencies = [
     "torch==2.12.1",
     "torchvision==0.27.1",
     "pygame",
-    "gymnasium[box2d]>=1.3.0",
+    "gymnasium[all]>=1.3.0",
     "gradio==6.19.0",
     "imageio[ffmpeg]>=2.37.3",
     "seaborn>=0.13.2",

@@ -1,5 +1,6 @@
 import datetime
 import inspect
+from ast import literal_eval
 from pathlib import Path
 
 import yaml
@@ -24,20 +25,26 @@ def get_config_path(model_path):
     return conf_path
 
 
+def parse_val(s):
+    try:
+        return literal_eval(s)
+    except (ValueError, SyntaxError):
+        return s
+
 def __build_config__(params, sig_params):
     temp = dict()
     for key in sig_params.keys():
         val = params.pop(0)
         if val is not None:
             if key.endswith("kwargs"):
-                temp[key] = {row[0]: row[1] for row in val if row and row[1] not in [None, ""]}
+                temp[key] = {row[0]: parse_val(row[1]) for row in val if row and row[1] not in [None, ""]}
             else:
-                temp[key] = val
+                temp[key] = parse_val(val)
     return temp
 
 class Configuration:
-    def __init__(self):
-        self.config = dict()
+    def __init__(self, config: dict | None = None):
+        self.config = config or dict()
         self.algorithms = load_algorithms()
 
     def write_config(self, params):
@@ -56,9 +63,10 @@ class Configuration:
             conf["vec_frame_stack"] = conf["vec_frame_stack"] | __build_config__(params, vec_frame_stack_params)
             conf["model_param"] = dict()
             conf["algorithm"] = params.pop(0)
+            conf["milestones"] = params.pop(0)
+            conf["total_timesteps"] = params.pop(0)
             model_params = inspect.signature(self.algorithms[conf["algorithm"]]).parameters
             conf["model_param"] = conf["model_param"] | __build_config__(params, model_params)
-            conf["total_timesteps"] = params.pop(0)
             conf[
                 "model_path"] = f"models/{conf['env_param']['env_id']}/{conf['algorithm']}/model-{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.zip"
         except Exception as e:
@@ -71,8 +79,9 @@ class Configuration:
     def save_model(self, model):
         model_path = get_project_root() / self.config["model_path"]
         model.save(model_path)
-        cfg = yaml.safe_dump(self.config, sort_keys=False)
         cfg_path = get_config_path(model_path)
-        cfg_path.parent.mkdir(parents=True, exist_ok=True)
-        with cfg_path.open("w") as f:
-            f.write(cfg)
+        if not cfg_path.exists():
+            cfg = yaml.safe_dump(self.config, sort_keys=False)
+            cfg_path.parent.mkdir(parents=True, exist_ok=True)
+            with cfg_path.open("w") as f:
+                f.write(cfg)
