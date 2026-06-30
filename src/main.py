@@ -1,42 +1,31 @@
-import datetime
+import argparse
+from pathlib import Path
 
-import torch
-from stable_baselines3 import PPO
-from stable_baselines3.common.env_util import make_vec_env
-
-
-def main():
-    torch.backends.cudnn.benchmark = True
-    torch.set_float32_matmul_precision("high")
-
-    env_args = dict(domain_randomize=True, continuous=True, render_mode=None)
-
-    env = make_vec_env("CarRacing-v3", n_envs=8, env_kwargs=env_args)
-
-    model: PPO = PPO("CnnPolicy", env, batch_size=1024, n_steps=4096, verbose=1)
-    model.learn(total_timesteps=20_000, progress_bar=True)
-    model.save(f"../models/{env.envs[0].spec.id}/model-{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
-
-    env.close()
-
-    env_args["render_mode"] = "human"
-
-    eval_env  = make_vec_env("CarRacing-v3", n_envs=1, env_kwargs=env_args)
-    obs = eval_env.reset()
-
-    for _ in range(1000):
-        action, _states = model.predict(obs, deterministic=True)
-        obs, reward,terminated, info = eval_env.step(action)
-
-        eval_env.render()
-
-    eval_env.close()
+from backend.configuration import Configuration
+from backend.controller import Controller
+from ui import Editor
+from util.utils import get_project_root
 
 
-
-
-
-
+def main(args):
+    if args.model_path is not None:
+        model_path = Path(args.model_path)
+        configuration = Configuration()
+        configuration.load_model(model_path)
+        if args.train:
+            Controller().start_training(configuration)
+        elif args.eval:
+            for _ in Controller().start_eval(configuration, mode=args.mode):
+                pass
+    else:
+        model_path = get_project_root() / "models"
+        controller = Controller()
+        Editor(controller, model_path=model_path).launch()
 
 if __name__ == "__main__":
-    main()
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument("--train", action="store_true", help="Train a new model")
+    arg_parser.add_argument("--eval", action="store_true", help="Evaluate a model")
+    arg_parser.add_argument("--model_path", type=str, default=None, help="Relative path to the model")
+    arg_parser.add_argument("--mode", type=str, default="rgb_array", help="Observation mode, default: rgb_array")
+    main(arg_parser.parse_args())
