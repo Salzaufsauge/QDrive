@@ -46,11 +46,12 @@ class Train:
             else:
                 model = model_class(env=env, **model_param)
 
-            eval_env = make_vec_env(**env_param)
+            eval_env_param = copy.deepcopy(env_param)
+            eval_env_param["n_envs"] = 1
+            eval_env = make_vec_env(**eval_env_param)
+
             if config.config.get("vec_frame_stack").get("enabled"):
                 eval_env = VecFrameStack(eval_env, config.config.get("vec_frame_stack").get("n_stack"))
-
-            eval_env.set_attr("n_envs", 1)
 
             streaming_callback = StreamingCallback(self, self.state)
             milestone_callback = MilestoneCallback(self, eval_env, config.config.get("milestones"))

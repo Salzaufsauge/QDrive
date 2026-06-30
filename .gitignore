@@ -312,3 +312,5 @@ models/
 !models/.keep
 experiments/
 !experiments/.keep
+
+src/ui/components/*.pyi

@@ -1,7 +1,7 @@
 import gradio as gr
 
 
-class TagInput(gr.HTML):
+class TagComponent(gr.HTML):
     def __init__(self, value=None, **kwargs):
         """
         Initializes a tag input component for dynamic tag management.
