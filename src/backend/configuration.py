@@ -68,7 +68,7 @@ class Configuration:
             model_params = inspect.signature(self.algorithms[conf["algorithm"]]).parameters
             conf["model_param"] = conf["model_param"] | __build_config__(params, model_params)
             conf[
-                "model_path"] = f"models/{conf['env_param']['env_id']}/{conf['algorithm']}/model-{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.zip"
+                "model_path"] = f"models/{conf['env_param']['env_id']}/{conf['algorithm']}/model-{conf["model_param"]["policy"]}-{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.zip"
         except Exception as e:
             raise e
         self.config = replace_empty_strings(conf)

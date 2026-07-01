@@ -11,9 +11,8 @@ import seaborn as sb
 from stable_baselines3.common.callbacks import BaseCallback, CallbackList
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
-from stable_baselines3.common.vec_env import VecFrameStack, VecVideoRecorder
+from stable_baselines3.common.vec_env import VecFrameStack, VecVideoRecorder, DummyVecEnv
 
-from backend.configuration import Configuration
 from util.inspection_helper import load_algorithms
 from util.utils import get_project_root, get_vec_env_class
 
@@ -37,7 +36,6 @@ class Train:
         if config.config.get("vec_frame_stack").get("enabled"):
             env = VecFrameStack(env, config.config.get("vec_frame_stack").get("n_stack"))
 
-
         try:
             model_param = config.config.get("model_param")
             model_class = self.algorithms.get(config.config.get("algorithm"))
@@ -48,6 +46,7 @@ class Train:
 
             eval_env_param = copy.deepcopy(env_param)
             eval_env_param["n_envs"] = 1
+            eval_env_param["vec_env_cls"] = DummyVecEnv  # for safety
             eval_env = make_vec_env(**eval_env_param)
 
             if config.config.get("vec_frame_stack").get("enabled"):
@@ -140,6 +139,7 @@ class StreamingCallback(BaseCallback):
                 if self.best_reward < log["reward"]:
                     self.state.log("INFO", f"New best reward: {log['reward']}")
                     self.best_reward = max(self.best_reward, log["reward"])
+                    self.trainer.config.config["current_timesteps"] = self.num_timesteps
                     self.trainer.config.save_model(self.model)
         return self.trainer.running.is_set()
 
@@ -151,30 +151,38 @@ class MilestoneCallback(BaseCallback):
         self.eval_env = eval_env
         self.milestones = milestones
         self.current_milestone = self.milestones.pop(0) if self.milestones else None
+        self.train_start_timesteps = trainer.config.config.get("current_timesteps") or 0
 
     def _on_step(self) -> bool:
         if not self.milestones and self.current_milestone is None:
             return True
-        if self.num_timesteps >= self.current_milestone:
-            path = Path(self.trainer.config.config.get("model_path").replace(".zip", ""))
-            mean_reward, std_reward = evaluate_policy(self.model, self.eval_env, n_eval_episodes=10)
-            video_path = get_project_root() / path / str(self.current_milestone)
-            model_path = path / str(self.current_milestone) / f"model-{mean_reward}.zip"
-            conf = copy.deepcopy(self.trainer.config.config)
-            conf["model_path"] = str(model_path)
-            conf = Configuration(conf)
-            conf.save_model(self.model)
-            rec_env = VecVideoRecorder(self.eval_env, str(video_path), record_video_trigger=lambda x: x == 0,
-                                       video_length=1000)
-            obs = rec_env.reset()
-            for _ in range(1000):
-                action, _states = self.model.predict(obs, deterministic=True)
-                obs, rewards, dones, info = rec_env.step(action)
-                rec_env.render("rgb_array")
-            rec_env.close()
+        if self.train_start_timesteps + self.num_timesteps >= self.current_milestone:
             try:
-                self.current_milestone = self.milestones.pop(0)
-            except IndexError:
-                self.current_milestone = None
+                path = Path(self.trainer.config.config.get("model_path").replace(".zip", ""))
+                mean_reward, std_reward = evaluate_policy(self.model, self.eval_env, n_eval_episodes=10)
+                video_path = get_project_root() / path / str(self.current_milestone)
+                model_path = video_path / f"model-{mean_reward}.zip"
+                self.model.save(model_path)
+                rec_env = VecVideoRecorder(self.eval_env, str(video_path), record_video_trigger=lambda x: x == 0,
+                                           video_length=1000)
+                obs = rec_env.reset()
+                for _ in range(1000):
+                    action, _states = self.model.predict(obs, deterministic=True)
+                    obs, rewards, dones, info = rec_env.step(action)
+                    rec_env.render()
+                rec_env.close()
+
+                self.trainer.state.log(
+                    "INFO",
+                    f"Milestone {self.current_milestone} done | reward={mean_reward:.2f}"
+                )
+            except Exception as e:
+                self.trainer.state.log("ERROR", f"Milestone evaluation failed: {e}")
+            finally:
+                try:
+                    self.current_milestone = self.milestones.pop(0)
+                    self.trainer.config.config["model_param"]["milestones"] = self.milestones
+                except IndexError:
+                    self.current_milestone = None
 
         return True
