@@ -68,7 +68,7 @@ class Configuration:
             model_params = inspect.signature(self.algorithms[conf["algorithm"]]).parameters
             conf["model_param"] = conf["model_param"] | __build_config__(params, model_params)
             conf[
-                "model_path"] = f"models/{conf['env_param']['env_id']}/{conf['algorithm']}/model-{conf["model_param"]["policy"]}-{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.zip"
+                "model_path"] = f"models/{conf['env_param']['env_id']}/{conf['algorithm']}/model-{conf['model_param']['policy']}-{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.zip"
         except Exception as e:
             raise e
         self.config = replace_empty_strings(conf)
@@ -79,7 +79,7 @@ class Configuration:
     def save_model(self, model):
         model_path = get_project_root() / self.config["model_path"]
         model.save(model_path)
-        cfg_path = get_config_path(model_path)  # allways save for updating milestones
+        cfg_path = get_config_path(model_path)  # always save for updating milestones
         cfg = yaml.safe_dump(self.config, sort_keys=False)
         cfg_path.parent.mkdir(parents=True, exist_ok=True)
         with cfg_path.open("w") as f:

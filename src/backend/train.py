@@ -210,7 +210,7 @@ class MilestoneCallback(BaseCallback):
                 )
             except Exception as e:
                 self.trainer.state.log("ERROR", f"Milestone evaluation failed: {e}")
-                raise e
+                raise
             finally:
                 try:
                     self.current_milestone = self.milestones.pop(0)

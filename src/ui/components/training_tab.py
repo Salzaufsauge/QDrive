@@ -127,7 +127,7 @@ class TrainingTab:
                                     if param.name in ["learning_rate", "clip_range"]:
                                         temp.append(gr.Number(label=param.name, value=param.default, interactive=True))
                                         continue
-                                    if param.name == "tensorboard_log":  # allways proj_root/logs
+                                    if param.name == "tensorboard_log":  # always proj_root/logs
                                         temp.append(gr.Label(value=None, visible=False))
                                         continue
                                     temp.append(make_ui_for_param(param))
