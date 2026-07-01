@@ -18,11 +18,9 @@ dependencies = [
     "wandb>=0.28.0",
 ]
 
-[buildsystem]
-require = [
-    "setuptools",
-    "swig"
-]
+[build-system]
+requires = ["setuptools", "swig"]
+build-backend = "setuptools.build_meta"
 
 [tool.uv.sources]
 torch = [
