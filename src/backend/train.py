@@ -181,7 +181,7 @@ class MilestoneCallback(BaseCallback):
             finally:
                 try:
                     self.current_milestone = self.milestones.pop(0)
-                    self.trainer.config.config["model_param"]["milestones"] = self.milestones
+                    self.trainer.config.config["milestones"] = self.milestones
                 except IndexError:
                     self.current_milestone = None
 
