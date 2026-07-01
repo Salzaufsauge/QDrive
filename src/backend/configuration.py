@@ -63,7 +63,7 @@ class Configuration:
             conf["vec_frame_stack"] = conf["vec_frame_stack"] | __build_config__(params, vec_frame_stack_params)
             conf["model_param"] = dict()
             conf["algorithm"] = params.pop(0)
-            conf["milestones"] = params.pop(0)
+            conf["milestones"] = sorted(list(params.pop(0)))
             conf["total_timesteps"] = params.pop(0)
             model_params = inspect.signature(self.algorithms[conf["algorithm"]]).parameters
             conf["model_param"] = conf["model_param"] | __build_config__(params, model_params)
@@ -79,9 +79,8 @@ class Configuration:
     def save_model(self, model):
         model_path = get_project_root() / self.config["model_path"]
         model.save(model_path)
-        cfg_path = get_config_path(model_path)
-        if not cfg_path.exists():
-            cfg = yaml.safe_dump(self.config, sort_keys=False)
-            cfg_path.parent.mkdir(parents=True, exist_ok=True)
-            with cfg_path.open("w") as f:
-                f.write(cfg)
+        cfg_path = get_config_path(model_path)  # allways save for updating milestones
+        cfg = yaml.safe_dump(self.config, sort_keys=False)
+        cfg_path.parent.mkdir(parents=True, exist_ok=True)
+        with cfg_path.open("w") as f:
+            f.write(cfg)

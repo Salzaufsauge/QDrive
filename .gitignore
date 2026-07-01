@@ -312,5 +312,6 @@ models/
 !models/.keep
 experiments/
 !experiments/.keep
+wandb/
 
 src/ui/components/*.pyi

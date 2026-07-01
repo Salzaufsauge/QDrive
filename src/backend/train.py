@@ -8,10 +8,12 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import polars as pl
 import seaborn as sb
+import wandb
 from stable_baselines3.common.callbacks import BaseCallback, CallbackList
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.vec_env import VecFrameStack, VecVideoRecorder, DummyVecEnv
+from wandb.integration.sb3 import WandbCallback
 
 from util.inspection_helper import load_algorithms
 from util.utils import get_project_root, get_vec_env_class
@@ -23,6 +25,7 @@ class Train:
         self.algorithms = load_algorithms()
         self.config = None
         self.state = None
+        self.run = None
 
     def train(self, config):
         self.running.set()
@@ -30,6 +33,15 @@ class Train:
         self.config = copy.deepcopy(config)
 
         self.state.log("INFO", "Starting training")
+        self.run = wandb.init(
+            project="QDrive",
+            config=config.config,
+            name=config.config.get("model_path").replace(".zip", ""),
+            dir=get_project_root(),
+            sync_tensorboard=True,
+            monitor_gym=True,
+        )
+
         env_param = config.config.get("env_param")
         env_param["vec_env_cls"] = get_vec_env_class(env_param["vec_env_cls"])
         env = make_vec_env(**env_param)
@@ -42,7 +54,7 @@ class Train:
             if (get_project_root() / config.config.get("model_path")).exists():
                 model = model_class.load(env=env, path=get_project_root() / config.config.get("model_path"))
             else:
-                model = model_class(env=env, **model_param)
+                model = model_class(env=env, tensorboard_log=get_project_root() / "logs", **model_param)
 
             eval_env_param = copy.deepcopy(env_param)
             eval_env_param["n_envs"] = 1
@@ -54,11 +66,27 @@ class Train:
 
             streaming_callback = StreamingCallback(self, self.state)
             milestone_callback = MilestoneCallback(self, eval_env, config.config.get("milestones"))
-            callback = CallbackList([streaming_callback, milestone_callback])
+            wandb_callback = WandbCallback(
+                gradient_save_freq=1000,
+                verbose=2,
+            )
+            callback = CallbackList([streaming_callback, milestone_callback, wandb_callback])
 
-            model.learn(total_timesteps=config.config.get("total_timesteps"), callback=callback)
+            model.learn(total_timesteps=config.config.get("total_timesteps"), tb_log_name=self.run.id,
+                        callback=callback)
+
             self.state.log("INFO", "Training finished")
+
+            artifact = wandb.Artifact(f"run-{self.run.id}-config", type="config")
+            artifact.add_file(
+                get_project_root() / self.config.config.get("model_path").replace("models", "experiments").replace(
+                    ".zip", ".yaml"))
+            self.run.log_artifact(artifact)
+            self.run.log_model(get_project_root() / self.config.config.get("model_path"))
+            self.run.finish(0)
         except Exception as e:
+            if self.run is not None:
+                self.run.finish(1)
             self.state.log("ERROR", f"Training failed: {e}")
         finally:
             env.close()
@@ -172,12 +200,17 @@ class MilestoneCallback(BaseCallback):
                     rec_env.render()
                 rec_env.close()
 
+                self.trainer.run.log_model(model_path)
+                self.trainer.run.log(
+                    {"video": wandb.Video(rec_env.video_path, caption=self.current_milestone, format="mp4")})
+
                 self.trainer.state.log(
                     "INFO",
                     f"Milestone {self.current_milestone} done | reward={mean_reward:.2f}"
                 )
             except Exception as e:
                 self.trainer.state.log("ERROR", f"Milestone evaluation failed: {e}")
+                raise e
             finally:
                 try:
                     self.current_milestone = self.milestones.pop(0)

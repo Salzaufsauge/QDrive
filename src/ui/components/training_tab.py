@@ -22,7 +22,6 @@ class TrainingTab:
         self.controller = controller
         self.model_path = model_path
         self.config = Configuration()
-        self.running = False
         self.algorithms = load_algorithms()
 
     def setup_config(self, *params):
@@ -127,6 +126,9 @@ class TrainingTab:
                                         continue
                                     if param.name in ["learning_rate", "clip_range"]:
                                         temp.append(gr.Number(label=param.name, value=param.default, interactive=True))
+                                        continue
+                                    if param.name == "tensorboard_log":  # allways proj_root/logs
+                                        temp.append(gr.Label(value=None, visible=False))
                                         continue
                                     temp.append(make_ui_for_param(param))
                         model_params[3:] = temp

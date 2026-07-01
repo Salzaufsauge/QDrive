@@ -15,6 +15,7 @@ dependencies = [
     "polars>=1.42.1",
     "pyarrow>=24.0.0",
     "matplotlib>=3.10.9",
+    "wandb>=0.28.0",
 ]
 
 [buildsystem]
