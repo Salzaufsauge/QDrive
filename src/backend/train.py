@@ -202,7 +202,9 @@ class MilestoneCallback(BaseCallback):
 
                 self.trainer.run.log_model(model_path)
                 self.trainer.run.log(
-                    {"video": wandb.Video(rec_env.video_path, caption=self.current_milestone, format="mp4")})
+                    {"video": wandb.Video(rec_env.video_path,
+                                          caption=f"{self.trainer.config.config['algorithm']} at step {self.current_milestone}",
+                                          format="mp4")}, step=self.current_milestone)
 
                 self.trainer.state.log(
                     "INFO",
