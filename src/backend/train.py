@@ -150,6 +150,7 @@ class StreamingCallback(BaseCallback):
         self.trainer = trainer
         self.state = state
         self.best_reward = -float("inf")
+        self.last_timesteps = 0
 
     def _on_step(self) -> bool:
         infos = self.locals.get("infos", [])
@@ -167,7 +168,10 @@ class StreamingCallback(BaseCallback):
                 if self.best_reward < log["reward"]:
                     self.state.log("INFO", f"New best reward: {log['reward']}")
                     self.best_reward = max(self.best_reward, log["reward"])
-                    self.trainer.config.config["current_timesteps"] = self.num_timesteps
+                    self.trainer.config.config[
+                        "current_timesteps"] = self.num_timesteps - self.last_timesteps + self.trainer.config.config.get(
+                        "current_timesteps", 0)
+                    self.last_timesteps = self.num_timesteps
                     self.trainer.config.save_model(self.model)
         return self.trainer.running.is_set()
 
@@ -179,7 +183,7 @@ class MilestoneCallback(BaseCallback):
         self.eval_env = eval_env
         self.milestones = milestones
         self.current_milestone = self.milestones.pop(0) if self.milestones else None
-        self.train_start_timesteps = trainer.config.config.get("current_timesteps") or 0
+        self.train_start_timesteps = trainer.config.config.get("current_timesteps", 0)
 
     def _on_step(self) -> bool:
         if not self.milestones and self.current_milestone is None:

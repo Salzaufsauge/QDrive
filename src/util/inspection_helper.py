@@ -21,34 +21,36 @@ def iter_modules(package):
         yield modname
 
 
-def make_ui_for_param(param):
+def make_ui_for_param(param, value=None):
     ann = unwrap_optional(param.annotation)
 
     origin = get_origin(ann)
 
+    val = param.default if value is None else value
+
     if ann is str:
-        return gr.Textbox(label=param.name, value=param.default, interactive=True)
+        return gr.Textbox(label=param.name, value=val, interactive=True)
 
     if ann is int:
-        return gr.Number(label=param.name, value=param.default, interactive=True)
+        return gr.Number(label=param.name, value=val, interactive=True)
 
     if ann is float:
-        return gr.Number(label=param.name, value=param.default, interactive=True)
+        return gr.Number(label=param.name, value=val, interactive=True)
 
     if ann is bool:
-        return gr.Checkbox(label=param.name, value=param.default, interactive=True)
+        return gr.Checkbox(label=param.name, value=val, interactive=True)
 
     if origin is dict:
-        return gr.Dataframe(label=param.name, value=param.default, headers=["key", "value"], type="array",
+        return gr.Dataframe(label=param.name, value=val, headers=["key", "value"], type="array",
                             interactive=True)
 
     if origin is typing.Callable:
-        return gr.Textbox(label=param.name, value=param.default, interactive=True)
+        return gr.Textbox(label=param.name, value=val, interactive=True)
 
-    if isinstance(param.default, numbers.Number):
-        return gr.Number(label=param.name, value=param.default, interactive=True)
+    if isinstance(val, numbers.Number):
+        return gr.Number(label=param.name, value=val, interactive=True)
 
-    return gr.Textbox(label=f"{param.name} (unknown type)", value=param.default, interactive=True)
+    return gr.Textbox(label=f"{param.name} (unknown type)", value=val, interactive=True)
 
 
 def load_algorithms():
