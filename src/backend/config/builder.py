@@ -1,14 +1,15 @@
-import datetime
 import inspect
 from ast import literal_eval
+from datetime import datetime
 from pathlib import Path
 
-import yaml
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import VecFrameStack
 
+from backend.config.config import ExperimentConfig
+from backend.config.storage import load_config
 from util.inspection_helper import load_algorithms
-from util.utils import get_project_root, replace_empty_strings
+from util.utils import replace_empty_strings
 
 
 def get_config_path(model_path):
@@ -25,13 +26,14 @@ def get_config_path(model_path):
     return conf_path
 
 
-def parse_val(s):
+def parse_val(s: str):
     try:
         return literal_eval(s)
     except (ValueError, SyntaxError):
         return s
 
-def __build_config__(params, sig_params):
+
+def build_config(params, sig_params):
     temp = dict()
     for key in sig_params.keys():
         val = params.pop(0)
@@ -42,45 +44,33 @@ def __build_config__(params, sig_params):
                 temp[key] = parse_val(val)
     return temp
 
-class Configuration:
-    def __init__(self, config: dict | None = None):
-        self.config = config or dict()
+
+class ConfigBuilder:
+    def __init__(self):
         self.algorithms = load_algorithms()
 
+    @staticmethod
     def write_config(self, params):
         conf = dict()
         try:
-            model_path = params.pop(0)
-            if model_path is not None:
-                self.load_model(model_path)
-                return
+            config_path = params.pop(0)
+            if config_path is not None:
+                return load_config(config_path)
             conf["env_param"] = dict()
             env_params = inspect.signature(make_vec_env).parameters
-            conf["env_param"] = conf["env_param"] | __build_config__(params, env_params)
+            conf["env_param"] = conf["env_param"] | self.__build_config__(params, env_params)
             conf["vec_frame_stack"] = dict()
             conf["vec_frame_stack"]["enabled"] = params.pop(0)
             vec_frame_stack_params = inspect.signature(VecFrameStack).parameters
-            conf["vec_frame_stack"] = conf["vec_frame_stack"] | __build_config__(params, vec_frame_stack_params)
+            conf["vec_frame_stack"] = conf["vec_frame_stack"] | self.__build_config__(params, vec_frame_stack_params)
             conf["model_param"] = dict()
             conf["algorithm"] = params.pop(0)
             conf["milestones"] = sorted(list(params.pop(0)))
             conf["total_timesteps"] = params.pop(0)
             model_params = inspect.signature(self.algorithms[conf["algorithm"]]).parameters
-            conf["model_param"] = conf["model_param"] | __build_config__(params, model_params)
+            conf["model_param"] = conf["model_param"] | self.__build_config__(params, model_params)
             conf[
-                "model_path"] = f"models/{conf['env_param']['env_id']}/{conf['algorithm']}/model-{conf['model_param']['policy']}-{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.zip"
+                "model_path"] = f"models/{conf['env_param']['env_id']}/{conf['algorithm']}/model-{conf['model_param']['policy']}-{datetime.now().strftime('%Y-%m-%d_%H-%M')}.zip"
         except Exception as e:
             raise e
-        self.config = replace_empty_strings(conf)
-
-    def load_model(self, model_path: Path):
-        self.config = yaml.safe_load(get_config_path(get_project_root() / model_path).read_text())
-
-    def save_model(self, model):
-        model_path = get_project_root() / self.config["model_path"]
-        model.save(model_path)
-        cfg_path = get_config_path(model_path)  # always save for updating milestones
-        cfg = yaml.safe_dump(self.config, sort_keys=False)
-        cfg_path.parent.mkdir(parents=True, exist_ok=True)
-        with cfg_path.open("w") as f:
-            f.write(cfg)
+        return ExperimentConfig(replace_empty_strings(conf), get_config_path(conf["model_path"]))

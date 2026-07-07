@@ -2,19 +2,19 @@ from pathlib import Path
 
 import gradio as gr
 
-from backend.configuration import Configuration
+from backend.config.storage import load_config
 from backend.controller import Controller
-from ui.components.model_loader import ModelLoader
+from frontend.components.config_loader import ConfigLoader
 
 
 class EvalTab:
-    def __init__(self, controller: Controller, model_path: Path):
+    def __init__(self, controller: Controller, config_path: Path):
         self.controller = controller
-        self.config = Configuration()
-        self.model_path = model_path
+        self.config = None
+        self.config_path = config_path
 
     def start_eval(self):
-        if self.config.config.get("model_path") is None:
+        if self.config.model_path is None:
             raise gr.Error("No model loaded")
         yield from self.controller.start_eval(self.config)
 
@@ -25,15 +25,19 @@ class EvalTab:
             gr.update(visible=True),
         ]
 
-    def load_model(self, model_path: Path):
-        self.config.load_model(model_path)
+    def load_model(self, config_path: Path):
+        self.config = load_config(config_path)
+        model_path = self.config.abs_model_path
+        if not model_path.exists():
+            raise gr.Error(f"Model {model_path} not found")
         return gr.update(visible=True, value=f"Model {model_path} loaded")
 
     def build(self):
         with gr.Tab("Eval"):
-            model_loader = ModelLoader(self.model_path)
-            model_loader.build_model_loader()
-            model_loader.load_btn.click(self.load_model, inputs=[model_loader.model], outputs=[model_loader.load_label])
+            model_loader = ConfigLoader(self.config_path)
+            model_loader.build_config_loader()
+            model_loader.load_btn.click(self.load_model, inputs=[model_loader.config],
+                                        outputs=[model_loader.load_label])
 
             eval_btn = gr.Button("Evaluate")
             stop_btn = gr.Button("Stop", visible=False)

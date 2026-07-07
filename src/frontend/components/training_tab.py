@@ -6,10 +6,11 @@ import gradio as gr
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import VecFrameStack
 
-from backend.configuration import Configuration
+from backend.config.builder import ConfigBuilder
+from backend.config.storage import load_config
 from backend.controller import Controller
-from ui.components import TagComponent
-from ui.components.model_loader import ModelLoader
+from frontend.components import TagComponent
+from frontend.components.config_loader import ConfigLoader
 from util.inspection_helper import make_ui_for_param, get_policies_from_algo, load_algorithms
 from util.utils import get_envs
 
@@ -18,15 +19,15 @@ def toggle_options(show):
     return gr.update(visible=show)
 
 class TrainingTab:
-    def __init__(self, controller: Controller, model_path: Path):
+    def __init__(self, controller: Controller, config_path: Path):
         self.controller = controller
-        self.model_path = model_path
-        self.config = Configuration()
+        self.config_path = config_path
+        self.config = None
         self.algorithms = load_algorithms()
 
     def setup_config(self, *params):
         try:
-            self.config.write_config(list(params))
+            self.config = ConfigBuilder.write_config(self, params)
         except Exception as e:
             raise gr.Error(f"Error: {e}")
 
@@ -48,12 +49,12 @@ class TrainingTab:
             gr.update(visible=True),
         ]
 
-    def load_model(self, model_path: Path):
+    def load_config(self, config_path: Path):
         try:
-            self.config.load_model(model_path)
+            self.config = load_config(config_path)
         except Exception as e:
             raise gr.Error(f"Error: {e}")
-        return gr.update(visible=True, value=f"Model {model_path} loaded")
+        return gr.update(visible=True, value=f"Config {config_path} loaded")
 
     def build(self):
         with gr.Tab("Train"):
@@ -62,10 +63,10 @@ class TrainingTab:
 
             with gr.Group():
 
-                model_loader = ModelLoader(self.model_path)
-                model_loader.build_model_loader()
-                model_loader.load_btn.click(self.load_model, inputs=[model_loader.model],
-                                            outputs=model_loader.load_label, )
+                config_loader = ConfigLoader(self.config_path)
+                config_loader.build_config_loader()
+                config_loader.load_btn.click(self.load_config, inputs=[config_loader.config],
+                                             outputs=config_loader.load_label, )
 
                 with gr.Accordion("Environment Parameters", open=False):
                     params = list(inspect.signature(make_vec_env).parameters.values())
@@ -132,7 +133,7 @@ class TrainingTab:
                                         continue
                                     temp.append(make_ui_for_param(param))
                         model_params[3:] = temp
-                        train.click(self.setup_config, inputs=[model_loader.model] + env_params + model_params,
+                        train.click(self.setup_config, inputs=[config_loader.config] + env_params + model_params,
                                     ).then(lambda: (gr.update(visible=False), gr.update(visible=True)),
                                            outputs=[train, stop]
                                            ).then(self.start_training).then(self.get_training_state,

@@ -314,4 +314,4 @@ experiments/
 !experiments/.keep
 wandb/
 
-src/ui/components/*.pyi
+src/frontend/components/*.pyi
