@@ -61,7 +61,7 @@ class Train:
             if config.vec_frame_stack.get("enabled"):
                 eval_env = VecFrameStack(eval_env, config.vec_frame_stack.get("n_stack"))
 
-            streaming_callback = StreamingCallback(self, self.state)
+            streaming_callback = StreamingCallback(self, self.state, eval_env, max( 10000 // config.env_params.get("n_envs"), 1))
             milestone_callback = MilestoneCallback(self, eval_env, config.milestones)
             wandb_callback = WandbCallback(
                 gradient_save_freq=1000,
