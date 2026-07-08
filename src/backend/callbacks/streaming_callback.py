@@ -1,18 +1,34 @@
 from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.evaluation import evaluate_policy
 
 from backend.config.storage import save_config, save_model
 
 
 class StreamingCallback(BaseCallback):
-    def __init__(self, trainer, state, verbose=0):
+    def __init__(self, trainer, state, eval_env, eval_freq=10000, n_eval_episodes=10, deterministic=True , verbose=0):
         super().__init__(verbose)
         self.trainer = trainer
         self.state = state
         self.best_reward = -float("inf")
         self.last_timesteps = 0
+        self.eval_env = eval_env
+        self.eval_freq = eval_freq
+        self.n_eval_episodes = n_eval_episodes
+        self.deterministic = deterministic
 
     def _on_step(self) -> bool:
         infos = self.locals.get("infos", [])
+        if self.eval_freq > 0 and self.n_calls % self.eval_freq == 0:
+            mean_reward, std_reward = evaluate_policy(self.model, self.eval_env, n_eval_episodes= self.n_eval_episodes, deterministic=self.deterministic, render=False)
+            self.state.log("INFO", f"Evaluation over {self.n_eval_episodes} episodes: {mean_reward:.2f} +/- {std_reward:.2f}")
+            if mean_reward > self.best_reward:
+                self.state.log("INFO", f"New best reward: {mean_reward:.2f}")
+                self.best_reward = mean_reward
+                self.trainer.config.current_timesteps = self.num_timesteps - self.last_timesteps + self.trainer.config.config.get(
+                    "current_timesteps", 0)
+                self.last_timesteps = self.num_timesteps
+                save_model(self.trainer.config, self.model)
+                save_config(self.trainer.config)
         for info in infos:
             if "episode" in info:
                 log = {
@@ -24,12 +40,4 @@ class StreamingCallback(BaseCallback):
                                f"Episode finished after {log['timesteps']} timesteps with reward {log['reward']}.")
                 with self.state.lock:
                     self.state.episodes.append(log)
-                if self.best_reward < log["reward"]:
-                    self.state.log("INFO", f"New best reward: {log['reward']}")
-                    self.best_reward = max(self.best_reward, log["reward"])
-                    self.trainer.config.current_timesteps = self.num_timesteps - self.last_timesteps + self.trainer.config.config.get(
-                        "current_timesteps", 0)
-                    self.last_timesteps = self.num_timesteps
-                    save_model(self.trainer.config, self.model)
-                    save_config(self.trainer.config)
         return self.trainer.running.is_set()
