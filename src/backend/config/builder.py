@@ -8,7 +8,6 @@ from stable_baselines3.common.vec_env import VecFrameStack
 
 from backend.config.config import ExperimentConfig
 from backend.config.storage import load_config
-from util.inspection_helper import load_algorithms
 from util.utils import replace_empty_strings
 
 
@@ -46,11 +45,8 @@ def build_config(params, sig_params):
 
 
 class ConfigBuilder:
-    def __init__(self):
-        self.algorithms = load_algorithms()
-
     @staticmethod
-    def write_config(self, params):
+    def write_config(params: list, algorithms):
         conf = dict()
         try:
             config_path = params.pop(0)
@@ -58,17 +54,17 @@ class ConfigBuilder:
                 return load_config(config_path)
             conf["env_param"] = dict()
             env_params = inspect.signature(make_vec_env).parameters
-            conf["env_param"] = conf["env_param"] | self.__build_config__(params, env_params)
+            conf["env_param"] = conf["env_param"] | build_config(params, env_params)
             conf["vec_frame_stack"] = dict()
             conf["vec_frame_stack"]["enabled"] = params.pop(0)
             vec_frame_stack_params = inspect.signature(VecFrameStack).parameters
-            conf["vec_frame_stack"] = conf["vec_frame_stack"] | self.__build_config__(params, vec_frame_stack_params)
+            conf["vec_frame_stack"] = conf["vec_frame_stack"] | build_config(params, vec_frame_stack_params)
             conf["model_param"] = dict()
             conf["algorithm"] = params.pop(0)
             conf["milestones"] = sorted(list(params.pop(0)))
             conf["total_timesteps"] = params.pop(0)
-            model_params = inspect.signature(self.algorithms[conf["algorithm"]]).parameters
-            conf["model_param"] = conf["model_param"] | self.__build_config__(params, model_params)
+            model_params = inspect.signature(algorithms[conf["algorithm"]]).parameters
+            conf["model_param"] = conf["model_param"] | build_config(params, model_params)
             conf[
                 "model_path"] = f"models/{conf['env_param']['env_id']}/{conf['algorithm']}/model-{conf['model_param']['policy']}-{datetime.now().strftime('%Y-%m-%d_%H-%M')}.zip"
         except Exception as e:

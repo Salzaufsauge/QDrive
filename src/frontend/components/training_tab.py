@@ -27,7 +27,7 @@ class TrainingTab:
 
     def setup_config(self, *params):
         try:
-            self.config = ConfigBuilder.write_config(self, params)
+            self.config = ConfigBuilder.write_config(list(params), self.algorithms)
         except Exception as e:
             raise gr.Error(f"Error: {e}")
 

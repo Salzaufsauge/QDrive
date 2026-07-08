@@ -7,7 +7,12 @@ from util.utils import get_project_root
 
 
 def load_config(config_path: Path):
-    return yaml.safe_load(get_project_root() / config_path)
+    path = get_project_root() / config_path
+
+    if not path.exists():
+        raise FileNotFoundError(f"Config file {path} not found")
+
+    return ExperimentConfig(yaml.safe_load(path.read_text()), config_path=config_path)
 
 
 def save_model(config: ExperimentConfig, model):
@@ -17,7 +22,7 @@ def save_model(config: ExperimentConfig, model):
 
 def save_config(config: ExperimentConfig):
     cfg_path = config.abs_config_path
-    cfg = yaml.safe_dump(config, sort_keys=False)
+    cfg = yaml.safe_dump(config.config, sort_keys=False)
     cfg_path.parent.mkdir(parents=True, exist_ok=True)
     with cfg_path.open("w") as f:
         f.write(cfg)
