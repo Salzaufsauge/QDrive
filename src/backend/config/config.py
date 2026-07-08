@@ -41,7 +41,7 @@ class ExperimentConfig:
     def milestones(self):
         return self.config["milestones"]
 
-    @property.fset
+    @milestones.setter
     def milestones(self, value):
         self.config["milestones"] = value
 
@@ -50,9 +50,9 @@ class ExperimentConfig:
         return self.config["total_timesteps"]
 
     @property
-    def current_timestep(self):
+    def current_timesteps(self):
         return self.config["current_timesteps"]
 
-    @property.fset
+    @current_timesteps.setter
     def current_timesteps(self, value):
         self.config["current_timesteps"] = value
