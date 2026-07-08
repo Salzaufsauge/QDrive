@@ -1,3 +1,4 @@
+import collections.abc
 import importlib
 import inspect
 import numbers
@@ -22,11 +23,21 @@ def iter_modules(package):
 
 
 def make_ui_for_param(param, value=None):
-    ann = unwrap_optional(param.annotation)
-
-    origin = get_origin(ann)
+    ann = param.annotation
+    args = typing.get_args(ann)
 
     val = param.default if value is None else value
+
+    if args:
+        ann = unwrap_optional(ann)
+
+        if any(get_origin(a) is collections.abc.Callable or a is typing.Callable for a in args):
+            return gr.Textbox(label=param.name, value=val, interactive=True)
+
+
+
+
+    origin = get_origin(ann)
 
     if ann is str:
         return gr.Textbox(label=param.name, value=val, interactive=True)

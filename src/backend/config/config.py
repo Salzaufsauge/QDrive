@@ -1,7 +1,8 @@
 from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
 
-from util.utils import get_project_root
+from util.utils import get_project_root, parse_params
 
 
 @dataclass(frozen=False)
@@ -33,9 +34,9 @@ class ExperimentConfig:
     def abs_config_path(self):
         return get_project_root() / self.config_path
 
-    @property
+    @cached_property
     def model_params(self):
-        return self.config["model_param"]
+        return parse_params(self.config["model_param"])
 
     @property
     def milestones(self):

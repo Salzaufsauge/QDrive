@@ -1,35 +1,12 @@
 import inspect
-from ast import literal_eval
 from datetime import datetime
-from pathlib import Path
 
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import VecFrameStack
 
 from backend.config.config import ExperimentConfig
 from backend.config.storage import load_config
-from util.utils import replace_empty_strings
-
-
-def get_config_path(model_path):
-    model_path = Path(model_path)
-    parts = list(model_path.parts)
-
-    if "models" in parts:
-        i = parts.index("models")
-        parts[i] = "experiments"
-
-    conf_path = Path(*parts)
-    conf_path = conf_path.with_suffix(".yaml")
-
-    return conf_path
-
-
-def parse_val(s: str):
-    try:
-        return literal_eval(s)
-    except (ValueError, SyntaxError):
-        return s
+from util.utils import replace_empty_strings, parse_val, get_config_path
 
 
 def build_config(params, sig_params):

@@ -125,9 +125,6 @@ class TrainingTab:
                                     if param.name == "env":
                                         temp.append(gr.Label(value=None, visible=False))
                                         continue
-                                    if param.name in ["learning_rate", "clip_range"]:
-                                        temp.append(gr.Number(label=param.name, value=param.default, interactive=True))
-                                        continue
                                     if param.name == "tensorboard_log":  # always proj_root/logs
                                         temp.append(gr.Label(value=None, visible=False))
                                         continue

@@ -5,7 +5,7 @@ import time
 import wandb
 from stable_baselines3.common.callbacks import CallbackList
 from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import VecFrameStack, DummyVecEnv
+from stable_baselines3.common.vec_env import VecFrameStack, DummyVecEnv, VecCheckNan
 from wandb.integration.sb3 import WandbCallback
 
 from backend.callbacks import MilestoneCallback
@@ -42,6 +42,7 @@ class Train:
         env_param = config.env_params
         env_param["vec_env_cls"] = get_vec_env_class(env_param["vec_env_cls"])
         env = make_vec_env(**env_param)
+        env = VecCheckNan(env)
         if config.vec_frame_stack.get("enabled"):
             env = VecFrameStack(env, config.vec_frame_stack.get("n_stack"))
 
