@@ -5,9 +5,11 @@ import numbers
 import pkgutil
 import types
 import typing
+from itertools import chain
 from typing import get_origin
 
 import gradio as gr
+import sb3_contrib
 import stable_baselines3 as sb3
 from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.off_policy_algorithm import OffPolicyAlgorithm
@@ -67,7 +69,7 @@ def make_ui_for_param(param, value=None):
 def load_algorithms():
     algos = {}
 
-    for modname in iter_modules(sb3):
+    for modname in chain(iter_modules(sb3), iter_modules(sb3_contrib)):
         try:
             module = importlib.import_module(modname)
         except Exception:

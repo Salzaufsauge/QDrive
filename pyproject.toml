@@ -16,6 +16,7 @@ dependencies = [
     "pyarrow>=24.0.0",
     "matplotlib>=3.10.9",
     "wandb>=0.28.0",
+    "sb3-contrib==2.9.0",
 ]
 
 [build-system]
