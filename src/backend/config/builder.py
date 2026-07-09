@@ -32,14 +32,21 @@ class ConfigBuilder:
             conf["env_param"] = dict()
             env_params = inspect.signature(make_vec_env).parameters
             conf["env_param"] = conf["env_param"] | build_config(params, env_params)
-            conf["vec_frame_stack"] = dict()
-            conf["vec_frame_stack"]["enabled"] = params.pop(0)
+            env_wrappers = conf["env_wrappers"] = list()
             vec_frame_stack_params = inspect.signature(VecFrameStack).parameters
-            conf["vec_frame_stack"] = conf["vec_frame_stack"] | build_config(params, vec_frame_stack_params)
+            if params.pop(0):
+                env_wrappers.append({"VecFrameStack": build_config(params, vec_frame_stack_params)})
+            else:
+                for _ in vec_frame_stack_params.values():
+                    params.pop(0)
             conf["model_param"] = dict()
             conf["algorithm"] = params.pop(0)
             conf["milestones"] = sorted(list(params.pop(0)))
             conf["total_timesteps"] = params.pop(0)
+            conf["callback_params"] = dict()
+            conf["callback_params"]["eval_freq"] = params.pop(0)
+            conf["callback_params"]["n_eval_episodes"] = params.pop(0)
+            conf["callback_params"]["deterministic"] = params.pop(0)
             model_params = inspect.signature(algorithms[conf["algorithm"]]).parameters
             conf["model_param"] = conf["model_param"] | build_config(params, model_params)
             conf[

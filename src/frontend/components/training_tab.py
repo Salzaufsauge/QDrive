@@ -96,7 +96,7 @@ class TrainingTab:
                             with gr.Row():
                                 for param in params[i:i + 3]:
                                     if param.name == "n_stack":
-                                        frame_stack = gr.Number(label=param.name, value=param.default, visible=False,
+                                        frame_stack = gr.Number(label=param.name, value=0, visible=False,
                                                                 interactive=True)
                                         env_params.append(frame_stack)
                                     else:
@@ -109,7 +109,12 @@ class TrainingTab:
                         gr.Dropdown(value="PPO", choices=self.algorithms.keys(), label="algorithm", interactive=True))
                     model_params.append(TagComponent.TagComponent())
                     model_params.append(gr.Number(label="total_timesteps", value=1000000, interactive=True))
-
+                    with gr.Accordion("Callback Parameters"):
+                        with gr.Row():
+                            model_params.append(gr.Number(label="eval_freq", value=10000, interactive=True))
+                            model_params.append(gr.Number(label="n_eval_episodes", value=10, interactive=True))
+                            model_params.append(gr.Checkbox(label="deterministic", value=True, interactive=True))
+                    model_params_base_len = len(model_params)
                     @gr.render(inputs=model_params[0])
                     def get_model_params(algo):
                         temp = list()
@@ -129,7 +134,7 @@ class TrainingTab:
                                         temp.append(gr.Label(value=None, visible=False))
                                         continue
                                     temp.append(make_ui_for_param(param))
-                        model_params[3:] = temp
+                        model_params[model_params_base_len:] = temp
                         train.click(self.setup_config, inputs=[config_loader.config] + env_params + model_params,
                                     ).then(lambda: (gr.update(visible=False), gr.update(visible=True)),
                                            outputs=[train, stop]

@@ -4,16 +4,15 @@ import time
 
 import wandb
 from stable_baselines3.common.callbacks import CallbackList
-from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import VecFrameStack, DummyVecEnv, VecCheckNan
 from wandb.integration.sb3 import WandbCallback
 
 from backend.callbacks import MilestoneCallback
 from backend.callbacks import StreamingCallback
 from backend.config.config import ExperimentConfig
+from backend.env.env_manager import build_env, EnvMode
 from backend.state.train_state import TrainState
 from util.inspection_helper import load_algorithms
-from util.utils import get_project_root, get_vec_env_class
+from util.utils import get_project_root
 
 
 class Train:
@@ -39,12 +38,7 @@ class Train:
             monitor_gym=True,
         )
 
-        env_param = config.env_params
-        env_param["vec_env_cls"] = get_vec_env_class(env_param["vec_env_cls"])
-        env = make_vec_env(**env_param)
-        env = VecCheckNan(env)
-        if config.vec_frame_stack.get("enabled"):
-            env = VecFrameStack(env, config.vec_frame_stack.get("n_stack"))
+        env = build_env(config, EnvMode.TRAIN)
 
         try:
             model_param = config.model_params
@@ -54,15 +48,12 @@ class Train:
             else:
                 model = model_class(env=env, tensorboard_log=get_project_root() / "logs", **model_param)
 
-            eval_env_param = copy.deepcopy(env_param)
-            eval_env_param["n_envs"] = 1
-            eval_env_param["vec_env_cls"] = DummyVecEnv  # for safety
-            eval_env = make_vec_env(**eval_env_param)
+            eval_env = build_env(config, EnvMode.EVAL)
 
-            if config.vec_frame_stack.get("enabled"):
-                eval_env = VecFrameStack(eval_env, config.vec_frame_stack.get("n_stack"))
-
-            streaming_callback = StreamingCallback(self, self.state, eval_env, max( 10000 // config.env_params.get("n_envs"), 1))
+            streaming_callback = StreamingCallback(self, self.state, eval_env, eval_freq=max(
+                config.callback_params["eval_freq"] // config.env_params.get("n_envs"), 1),
+                                                   n_eval_episodes=config.callback_params["n_eval_episodes"],
+                                                   deterministic=config.callback_params["deterministic"])
             milestone_callback = MilestoneCallback(self, eval_env, config.milestones)
             wandb_callback = WandbCallback(
                 gradient_save_freq=1000,

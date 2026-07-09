@@ -1,11 +1,8 @@
 import threading
 
-from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import VecFrameStack
-
 from backend.config.config import ExperimentConfig
+from backend.env.env_manager import EnvMode, build_env
 from util.inspection_helper import load_algorithms
-from util.utils import get_vec_env_class
 
 
 class Evaluate:
@@ -15,12 +12,9 @@ class Evaluate:
 
     def evaluate(self, config: ExperimentConfig, mode: str):
         self.running.set()
-        env_param = dict(config.env_params or {})
-        env_param["n_envs"] = 1
-        env_param["vec_env_cls"] = get_vec_env_class(env_param["vec_env_cls"])
-        env = make_vec_env(**env_param)
-        if config.vec_frame_stack.get("enabled"):
-            env = VecFrameStack(env, config.vec_frame_stack.get("n_stack"))
+
+        env = build_env(config, EnvMode.EVAL)
+
         model = self.algorithms.get(config.algorithm).load(
             config.abs_model_path, env=env)
         obs = env.reset()

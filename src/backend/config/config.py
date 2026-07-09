@@ -15,8 +15,8 @@ class ExperimentConfig:
         return self.config["env_param"]
 
     @property
-    def vec_frame_stack(self):
-        return self.config["vec_frame_stack"]
+    def env_wrappers(self):
+        return self.config["env_wrappers"]
 
     @property
     def algorithm(self):
@@ -57,3 +57,7 @@ class ExperimentConfig:
     @current_timesteps.setter
     def current_timesteps(self, value):
         self.config["current_timesteps"] = value
+
+    @property
+    def callback_params(self):
+        return self.config["callback_params"]
