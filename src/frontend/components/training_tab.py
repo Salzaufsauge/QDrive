@@ -1,33 +1,26 @@
-import inspect
 import threading
 from pathlib import Path
 
 import gradio as gr
-from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import VecFrameStack
 
 from backend.config.builder import ConfigBuilder
 from backend.config.storage import load_config
 from backend.controller import Controller
-from frontend.components import TagComponent
 from frontend.components.config_loader import ConfigLoader
-from util.inspection_helper import make_ui_for_param, get_policies_from_algo, load_algorithms
-from util.utils import get_envs
+from frontend.components.env_tab import EnvTab
+from frontend.components.model_tab import ModelTab
+from frontend.components.wrapper_tab import WrapperTab
 
-
-def toggle_options(show):
-    return gr.update(visible=show)
 
 class TrainingTab:
     def __init__(self, controller: Controller, config_path: Path):
         self.controller = controller
         self.config_path = config_path
         self.config = None
-        self.algorithms = load_algorithms()
 
     def setup_config(self, *params):
         try:
-            self.config = ConfigBuilder.write_config(list(params), self.algorithms)
+            self.config = ConfigBuilder.write_config(list(params))
         except Exception as e:
             raise gr.Error(f"Error: {e}")
 
@@ -57,100 +50,43 @@ class TrainingTab:
         return gr.update(visible=True, value=f"Config {config_path} loaded")
 
     def build(self):
-        with gr.Tab("Train"):
-            env_params = []
-            model_params = []
+        with gr.Group():
+            config_loader = ConfigLoader(self.config_path)
+            config_loader.build_config_loader()
+            config_loader.load_btn.click(self.load_config, inputs=[config_loader.config],
+                                         outputs=config_loader.load_label, )
 
-            with gr.Group():
+            with gr.Tab("Environment Parameters"):
+                env_tab = EnvTab()
+                env_tab.build()
+            with gr.Tab("Wrapper Parameters"):
+                wrapper_tab = WrapperTab()
+                wrapper_tab.build()
 
-                config_loader = ConfigLoader(self.config_path)
-                config_loader.build_config_loader()
-                config_loader.load_btn.click(self.load_config, inputs=[config_loader.config],
-                                             outputs=config_loader.load_label, )
+            with gr.Tab("Model Parameters"):
+                model_tab = ModelTab()
+                model_tab.build()
 
-                with gr.Accordion("Environment Parameters", open=False):
-                    params = list(inspect.signature(make_vec_env).parameters.values())
-                    for i in range(0, len(params), 3):
-                        with gr.Row():
-                            for param in params[i:i + 3]:
-                                if param.name == "env_id":
-                                    env_params.append(
-                                        gr.Dropdown(value="CarRacing-v3", choices=get_envs(), label=param.name,
-                                                    interactive=True))
-                                    continue
-                                if param.name == "vec_env_cls":
-                                    env_params.append(
-                                        gr.Dropdown(value="DummyVecEnv", choices=["DummyVecEnv", "SubprocVecEnv"],
-                                                    label=param.name, interactive=True))
-                                    continue
-                                if param.name == "wrapper_class":
-                                    env_params.append(gr.Label(value=None, visible=False))
-                                    continue
-                                env_params.append(make_ui_for_param(param))
+                @gr.render(inputs=model_tab.model_params[0])
+                def render(algo):
+                    model_params = model_tab.get_model_params(algo)
+                    train.click(self.setup_config,
+                                inputs=[config_loader.config] + env_tab.env_params + wrapper_tab.wrapper_params + model_params,
+                                ).then(lambda: (gr.update(visible=False), gr.update(visible=True)),
+                                       outputs=[train, stop]
+                                       ).then(self.start_training).then(self.get_training_state,
+                                                                        outputs=[console, graph])
 
-                    with gr.Row():
-                        params = list(inspect.signature(VecFrameStack).parameters.values())
-                        cb = gr.Checkbox(label="Use FrameStack", value=False)
-                        env_params.append(cb)
-                        for i in range(0, len(params), 3):
-                            with gr.Row():
-                                for param in params[i:i + 3]:
-                                    if param.name == "n_stack":
-                                        frame_stack = gr.Number(label=param.name, value=0, visible=False,
-                                                                interactive=True)
-                                        env_params.append(frame_stack)
-                                    else:
-                                        env_params.append(gr.Label(value=None, visible=False))
+        train = gr.Button("Train")
+        stop = gr.Button("Stop", visible=False)
 
-                        cb.change(toggle_options, cb, [frame_stack])
+        with gr.Accordion("Training Output", open=True):
+            with gr.Row():
+                console = gr.Textbox(
+                    label="Console",
+                    lines=15,
+                    interactive=False
+                )
+                graph = gr.Plot(label="Training Curve")
 
-                with gr.Accordion("Model Parameters", open=False):
-                    model_params.append(
-                        gr.Dropdown(value="PPO", choices=self.algorithms.keys(), label="algorithm", interactive=True))
-                    model_params.append(TagComponent.TagComponent())
-                    model_params.append(gr.Number(label="total_timesteps", value=1000000, interactive=True))
-                    with gr.Accordion("Callback Parameters"):
-                        with gr.Row():
-                            model_params.append(gr.Number(label="eval_freq", value=10000, interactive=True))
-                            model_params.append(gr.Number(label="n_eval_episodes", value=10, interactive=True))
-                            model_params.append(gr.Checkbox(label="deterministic", value=True, interactive=True))
-                    model_params_base_len = len(model_params)
-                    @gr.render(inputs=model_params[0])
-                    def get_model_params(algo):
-                        temp = list()
-                        params = list(inspect.signature(self.algorithms[algo]).parameters.values())
-
-                        for i in range(0, len(params), 3):
-                            with gr.Row():
-                                for param in params[i:i + 3]:
-                                    if param.name == "policy":
-                                        policy = get_policies_from_algo(self.algorithms[algo]).keys()
-                                        temp.append(gr.Dropdown(choices=policy, label=param.name, interactive=True))
-                                        continue
-                                    if param.name == "env":
-                                        temp.append(gr.Label(value=None, visible=False))
-                                        continue
-                                    if param.name == "tensorboard_log":  # always proj_root/logs
-                                        temp.append(gr.Label(value=None, visible=False))
-                                        continue
-                                    temp.append(make_ui_for_param(param))
-                        model_params[model_params_base_len:] = temp
-                        train.click(self.setup_config, inputs=[config_loader.config] + env_params + model_params,
-                                    ).then(lambda: (gr.update(visible=False), gr.update(visible=True)),
-                                           outputs=[train, stop]
-                                           ).then(self.start_training).then(self.get_training_state,
-                                                                            outputs=[console, graph])
-
-            train = gr.Button("Train")
-            stop = gr.Button("Stop", visible=False)
-
-            with gr.Accordion("Training Output", open=True):
-                with gr.Row():
-                    console = gr.Textbox(
-                        label="Console",
-                        lines=15,
-                        interactive=False
-                    )
-                    graph = gr.Plot(label="Training Curve")
-
-            stop.click(self.stop_training, outputs=[stop, train])
+        stop.click(self.stop_training, outputs=[stop, train])

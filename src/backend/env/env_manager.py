@@ -4,7 +4,7 @@ from functools import partial
 
 import gymnasium
 from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import VecEnv, DummyVecEnv, VecCheckNan, VecEnvWrapper
+from stable_baselines3.common.vec_env import VecEnv, DummyVecEnv, VecEnvWrapper
 
 from backend.config.config import ExperimentConfig
 from util.inspection_helper import load_env_wrappers
@@ -30,9 +30,6 @@ def build_env(config: ExperimentConfig, mode: EnvMode) -> VecEnv:
 
     for wrapper in vec_env_wrappers:
         env = wrapper(venv=env)
-
-    if mode == EnvMode.TRAIN:
-        env = VecCheckNan(env)
 
     return env
 

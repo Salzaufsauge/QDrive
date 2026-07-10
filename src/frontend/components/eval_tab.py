@@ -33,8 +33,8 @@ class EvalTab:
         return gr.update(visible=True, value=f"Model {model_path} loaded")
 
     def build(self):
-        with gr.Tab("Eval"):
-            model_loader = ConfigLoader(self.config_path)
+
+        model_loader = ConfigLoader(self.config_path)
             model_loader.build_config_loader()
             model_loader.load_btn.click(self.load_model, inputs=[model_loader.config],
                                         outputs=[model_loader.load_label])

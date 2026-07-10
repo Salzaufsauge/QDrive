@@ -27,17 +27,21 @@ def iter_modules(package):
         yield modname
 
 
-def make_ui_for_param(param, value=None):
+def make_ui_for_param(param, value=None, visible=True):
     ann = param.annotation
+
     args = typing.get_args(ann)
 
     val = param.default if value is None else value
+
+    if callable(val):
+        val = inspect.getsource(val).strip()
 
     if args:
         ann = unwrap_optional(ann)
 
         if any(get_origin(a) is collections.abc.Callable or a is typing.Callable for a in args):
-            return gr.Textbox(label=param.name, value=val, interactive=True)
+            return gr.Textbox(label=param.name, value=val, interactive=True, visible=visible)
 
 
 
@@ -45,28 +49,28 @@ def make_ui_for_param(param, value=None):
     origin = get_origin(ann)
 
     if ann is str:
-        return gr.Textbox(label=param.name, value=val, interactive=True)
+        return gr.Textbox(label=param.name, value=val, interactive=True, visible=visible)
 
     if ann is int:
-        return gr.Number(label=param.name, value=val, interactive=True)
+        return gr.Number(label=param.name, value=val, interactive=True, visible=visible)
 
     if ann is float:
-        return gr.Number(label=param.name, value=val, interactive=True)
+        return gr.Number(label=param.name, value=val, interactive=True, visible=visible)
 
     if ann is bool:
-        return gr.Checkbox(label=param.name, value=val, interactive=True)
+        return gr.Checkbox(label=param.name, value=val, interactive=True, visible=visible)
 
     if origin is dict:
         return gr.Dataframe(label=param.name, value=val, headers=["key", "value"], type="array",
-                            interactive=True)
+                            interactive=True, visible=visible)
 
     if origin is typing.Callable:
-        return gr.Textbox(label=param.name, value=val, interactive=True)
+        return gr.Textbox(label=param.name, value=val, interactive=True, visible=visible)
 
     if isinstance(val, numbers.Number):
-        return gr.Number(label=param.name, value=val, interactive=True)
+        return gr.Number(label=param.name, value=val, interactive=True, visible=visible)
 
-    return gr.Textbox(label=f"{param.name} (unknown type)", value=val, interactive=True)
+    return gr.Textbox(label=f"{param.name} (unknown type)", value=val, interactive=True, visible=visible)
 
 
 @cache

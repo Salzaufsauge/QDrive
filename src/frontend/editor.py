@@ -17,8 +17,10 @@ class Editor:
         with gr.Blocks() as editor:
             gr.Markdown("# QDrive Training UI")
 
-            self.training_tab.build()
-            self.eval_tab.build()
+            with gr.Tab("Train"):
+                self.training_tab.build()
+            with gr.Tab("Eval"):
+                self.eval_tab.build()
 
         editor.queue()
-        editor.launch(pwa=True)
+        editor.launch()
