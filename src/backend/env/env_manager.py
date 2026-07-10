@@ -15,20 +15,16 @@ class EnvMode(Enum):
     TRAIN = "train"
     EVAL = "eval"
 
-class WrapperType(Enum):
-    VENV = "venv"
-    GYMENV = "env"
-
-
 def build_env(config: ExperimentConfig, mode: EnvMode) -> VecEnv:
     env_config = copy.deepcopy(config.env_params)
     wrapper_config = copy.deepcopy(config.env_wrappers)
 
-    gym_wrappers, vec_env_wrappers = build_wrapper(wrapper_config, mode)
+    gym_wrappers, vec_env_wrappers = build_wrapper(wrapper_config)
 
     env_override = {
         "vec_env_cls": get_vec_env_class(env_config["vec_env_cls"]) if mode == EnvMode.TRAIN else DummyVecEnv,
         "n_envs": env_config["n_envs"] if mode == EnvMode.TRAIN else 1,
+        "wrapper_class": compose_gym_wrappers(gym_wrappers) if gym_wrappers else None
     }
     env = make_vec_env(**(env_config | env_override))
 
@@ -41,7 +37,7 @@ def build_env(config: ExperimentConfig, mode: EnvMode) -> VecEnv:
     return env
 
 
-def build_wrapper(wrapper_config: list, mode: EnvMode):
+def build_wrapper(wrapper_config: list):
     wrappers = load_env_wrappers()
 
     gym_env_wrappers = list()
@@ -49,19 +45,21 @@ def build_wrapper(wrapper_config: list, mode: EnvMode):
 
     for wrapper in wrapper_config:
         for wrapper_name, params in wrapper.items():
-            wrapper_type, wrapper_fn  = wrap(wrappers[wrapper_name], **params)
-            if wrapper_type == WrapperType.GYMENV:
-                gym_env_wrappers.append(wrapper_fn)
-            else:
-                vec_env_wrappers.append(wrapper_fn)
+            wrapper_cls = wrappers[wrapper_name]
+            if issubclass(wrapper_cls, gymnasium.Wrapper):
+                gym_env_wrappers.append(partial(wrapper_cls, **params))
+            elif issubclass(wrapper_cls, VecEnvWrapper):
+                vec_env_wrappers.append(partial(wrapper_cls, **params))
+
+            raise TypeError("Unknown wrapper type")
 
     return gym_env_wrappers, vec_env_wrappers
 
 
-def wrap(wrapper_cls, **kwargs):
-    if issubclass(wrapper_cls, gymnasium.Wrapper):
-        return WrapperType.GYMENV, partial(wrapper_cls, **kwargs)
-    elif issubclass(wrapper_cls, VecEnvWrapper):
-        return WrapperType.VENV, partial(wrapper_cls, **kwargs)
+def compose_gym_wrappers(wrappers):
+    def wrapper(env):
+        for wrapper in wrappers:
+            env = wrapper(env=env)
+        return env
 
-    raise TypeError("Unknown wrapper type")
+    return wrapper
