@@ -47,8 +47,8 @@ def build_wrapper(wrapper_config: list):
                 gym_env_wrappers.append(partial(wrapper_cls, **params))
             elif issubclass(wrapper_cls, VecEnvWrapper):
                 vec_env_wrappers.append(partial(wrapper_cls, **params))
-
-            raise TypeError("Unknown wrapper type")
+            else:
+                raise TypeError("Unknown wrapper type")
 
     return gym_env_wrappers, vec_env_wrappers
 
