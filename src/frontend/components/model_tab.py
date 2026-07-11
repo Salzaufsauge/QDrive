@@ -1,10 +1,23 @@
 import inspect
+from functools import partial
 
 import gradio as gr
 
 from frontend.components import TagComponent
 from util.inspection_helper import load_algorithms, get_policies_from_algo, make_ui_for_param
+from util.utils import build_ui_params
 
+
+def make_model_ui(param: inspect.Parameter, algorithms, algo):
+    if param.name == "policy":
+        policy = get_policies_from_algo(algorithms[algo]).keys()
+        return gr.Dropdown(choices=policy, label=param.name, interactive=True)
+    if param.name == "env":
+        return gr.Label(value=None, visible=False)
+    if param.name == "tensorboard_log":  # always proj_root/logs
+        return gr.Label(value=None, visible=False)
+    else:
+        return make_ui_for_param(param)
 
 class ModelTab:
     def __init__(self):
@@ -25,23 +38,9 @@ class ModelTab:
         self.model_params_base_len = len(self.model_params)
 
     def get_model_params(self, algo):
-        temp = list()
         params = list(inspect.signature(self.algorithms[algo]).parameters.values())
 
-        for i in range(0, len(params), 3):
-            with gr.Row():
-                for param in params[i:i + 3]:
-                    if param.name == "policy":
-                        policy = get_policies_from_algo(self.algorithms[algo]).keys()
-                        temp.append(gr.Dropdown(choices=policy, label=param.name, interactive=True))
-                        continue
-                    if param.name == "env":
-                        temp.append(gr.Label(value=None, visible=False))
-                        continue
-                    if param.name == "tensorboard_log":  # always proj_root/logs
-                        temp.append(gr.Label(value=None, visible=False))
-                        continue
-                    temp.append(make_ui_for_param(param))
+        temp = build_ui_params(params, 4, partial(make_model_ui, algorithms=self.algorithms, algo=algo))
 
         self.model_params[self.model_params_base_len:] = temp
         return self.model_params

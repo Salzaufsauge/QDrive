@@ -43,9 +43,6 @@ def make_ui_for_param(param, value=None, visible=True):
         if any(get_origin(a) is collections.abc.Callable or a is typing.Callable for a in args):
             return gr.Textbox(label=param.name, value=val, interactive=True, visible=visible)
 
-
-
-
     origin = get_origin(ann)
 
     if ann is str:
@@ -67,8 +64,15 @@ def make_ui_for_param(param, value=None, visible=True):
     if origin is typing.Callable:
         return gr.Textbox(label=param.name, value=val, interactive=True, visible=visible)
 
+    if isinstance(val, bool):
+        return gr.Checkbox(label=param.name, value=val, interactive=True, visible=visible)
+
     if isinstance(val, numbers.Number):
         return gr.Number(label=param.name, value=val, interactive=True, visible=visible)
+
+    if param.name.endswith("keys"):
+        return gr.Dataframe(label=param.name, headers=["key", "value"], type="array",
+                            interactive=True, visible=visible)
 
     return gr.Textbox(label=f"{param.name} (unknown type)", value=val, interactive=True, visible=visible)
 

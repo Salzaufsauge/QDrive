@@ -35,15 +35,15 @@ class EvalTab:
     def build(self):
 
         model_loader = ConfigLoader(self.config_path)
-            model_loader.build_config_loader()
-            model_loader.load_btn.click(self.load_model, inputs=[model_loader.config],
-                                        outputs=[model_loader.load_label])
+        model_loader.build_config_loader()
+        model_loader.load_btn.click(self.load_model, inputs=[model_loader.config],
+                                    outputs=[model_loader.load_label])
 
-            eval_btn = gr.Button("Evaluate")
-            stop_btn = gr.Button("Stop", visible=False)
+        eval_btn = gr.Button("Evaluate")
+        stop_btn = gr.Button("Stop", visible=False)
 
-            output = gr.Image(interactive=False, streaming=True, type="numpy", label="Output")
+        output = gr.Image(interactive=False, streaming=True, type="numpy", label="Output")
 
-            eval_btn.click(lambda: (gr.update(visible=False), gr.update(visible=True)),
-                           outputs=[eval_btn, stop_btn]).then(self.start_eval, outputs=output)
-            stop_btn.click(self.stop_eval, outputs=[stop_btn, eval_btn])
+        eval_btn.click(lambda: (gr.update(visible=False), gr.update(visible=True)),
+                       outputs=[eval_btn, stop_btn]).then(self.start_eval, outputs=output)
+        stop_btn.click(self.stop_eval, outputs=[stop_btn, eval_btn])

@@ -1,4 +1,5 @@
 import threading
+import time
 
 from backend.config.config import ExperimentConfig
 from backend.env.env_manager import EnvMode, build_env
@@ -18,11 +19,24 @@ class Evaluate:
         model = self.algorithms.get(config.algorithm).load(
             config.abs_model_path, env=env)
         obs = env.reset()
+
+        target_fps = 60
+        frame_time = 1 / target_fps
+
         try:
             while self.running.is_set():
+                start = time.perf_counter()
+
                 action, _states = model.predict(obs, deterministic=True)
                 obs, rewards, done, info = env.step(action)
                 yield env.render(mode)
+
+                elapsed = time.perf_counter() - start
+                if elapsed < frame_time:
+                    time.sleep(frame_time - elapsed)
+
+                if done:
+                    obs = env.reset()
         finally:
             self.running.clear()
             env.close()

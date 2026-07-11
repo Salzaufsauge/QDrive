@@ -1,6 +1,5 @@
 import gradio as gr
 
-
 class TagComponent(gr.HTML):
     def __init__(self, value=None, **kwargs):
         """

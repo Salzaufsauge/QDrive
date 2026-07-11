@@ -50,32 +50,29 @@ class TrainingTab:
         return gr.update(visible=True, value=f"Config {config_path} loaded")
 
     def build(self):
-        with gr.Group():
-            config_loader = ConfigLoader(self.config_path)
-            config_loader.build_config_loader()
-            config_loader.load_btn.click(self.load_config, inputs=[config_loader.config],
-                                         outputs=config_loader.load_label, )
+        config_loader = ConfigLoader(self.config_path)
+        config_loader.build_config_loader()
+        config_loader.load_btn.click(self.load_config, inputs=[config_loader.config],
+                                     outputs=config_loader.load_label, )
+        with gr.Tab("Environment Parameters"):
+            env_tab = EnvTab()
+            env_tab.build()
+        with gr.Tab("Wrapper Parameters"):
+            wrapper_tab = WrapperTab()
+            wrapper_tab.build()
+        with gr.Tab("Model Parameters"):
+            model_tab = ModelTab()
+            model_tab.build()
 
-            with gr.Tab("Environment Parameters"):
-                env_tab = EnvTab()
-                env_tab.build()
-            with gr.Tab("Wrapper Parameters"):
-                wrapper_tab = WrapperTab()
-                wrapper_tab.build()
-
-            with gr.Tab("Model Parameters"):
-                model_tab = ModelTab()
-                model_tab.build()
-
-                @gr.render(inputs=model_tab.model_params[0])
-                def render(algo):
-                    model_params = model_tab.get_model_params(algo)
-                    train.click(self.setup_config,
-                                inputs=[config_loader.config] + env_tab.env_params + wrapper_tab.wrapper_params + model_params,
-                                ).then(lambda: (gr.update(visible=False), gr.update(visible=True)),
-                                       outputs=[train, stop]
-                                       ).then(self.start_training).then(self.get_training_state,
-                                                                        outputs=[console, graph])
+            @gr.render(inputs=model_tab.model_params[0])
+            def render(algo):
+                model_params = model_tab.get_model_params(algo)
+                train.click(self.setup_config,
+                            inputs=[config_loader.config] + env_tab.env_params + wrapper_tab.wrapper_params + model_params,
+                            ).then(lambda: (gr.update(visible=False), gr.update(visible=True)),
+                                   outputs=[train, stop]
+                                   ).then(self.start_training).then(self.get_training_state,
+                                                                    outputs=[console, graph])
 
         train = gr.Button("Train")
         stop = gr.Button("Stop", visible=False)

@@ -34,21 +34,20 @@ def build_env(config: ExperimentConfig, mode: EnvMode) -> VecEnv:
     return env
 
 
-def build_wrapper(wrapper_config: list):
+def build_wrapper(wrapper_config: dict):
     wrappers = load_env_wrappers()
 
     gym_env_wrappers = list()
     vec_env_wrappers = list()
 
-    for wrapper in wrapper_config:
-        for wrapper_name, params in wrapper.items():
-            wrapper_cls = wrappers[wrapper_name]
-            if issubclass(wrapper_cls, gymnasium.Wrapper):
-                gym_env_wrappers.append(partial(wrapper_cls, **params))
-            elif issubclass(wrapper_cls, VecEnvWrapper):
-                vec_env_wrappers.append(partial(wrapper_cls, **params))
-            else:
-                raise TypeError("Unknown wrapper type")
+    for wrapper_name, params in wrapper_config.items():
+        wrapper_cls = wrappers[wrapper_name]
+        if issubclass(wrapper_cls, gymnasium.Wrapper):
+            gym_env_wrappers.append(partial(wrapper_cls, **params))
+        elif issubclass(wrapper_cls, VecEnvWrapper):
+            vec_env_wrappers.append(partial(wrapper_cls, **params))
+        else:
+            raise TypeError("Unknown wrapper type")
 
     return gym_env_wrappers, vec_env_wrappers
 

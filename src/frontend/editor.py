@@ -14,7 +14,7 @@ class Editor:
         self.config_path = config_path
 
     def launch(self):
-        with gr.Blocks() as editor:
+        with gr.Blocks(delete_cache=(3600, 3600), fill_width=True, fill_height=True) as editor:
             gr.Markdown("# QDrive Training UI")
 
             with gr.Tab("Train"):
@@ -23,4 +23,4 @@ class Editor:
                 self.eval_tab.build()
 
         editor.queue()
-        editor.launch()
+        editor.launch(theme=gr.Theme.from_hub("JohnSmith9982/small_and_pretty"))
