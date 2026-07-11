@@ -1,9 +1,8 @@
 import inspect
 from functools import partial
 
-from nicegui import ui
+from nicegui import ui, events
 
-from frontend.components import TagComponent
 from util.inspection_helper import load_algorithms, get_policies_from_algo, make_ui_for_param
 from util.utils import build_ui_params
 
@@ -26,12 +25,31 @@ def make_model_ui(param: inspect.Parameter, algorithms, algo):
     return make_ui_for_param(param)
 
 
+def split_values(e: events.ValueChangeEventArguments):
+    values = [
+        word.strip()
+        for part in e.value
+        for word in part.split(',')
+        if word.strip().isdigit() and int(word.strip()) > 0
+    ]
+    e.sender.value = sorted(set(values), key=int)
+
 class ModelTab:
     def __init__(self):
         self.algorithm_select = None
         self.algorithms = load_algorithms()
         self.model_params = []
         self.model_params_base_len = 0
+
+        ui.add_head_html('''
+        <style type="text/tailwindcss">
+        @layer components {
+            .milestone-chip .q-chip {
+                @apply bg-[#5898d4] text-white rounded-full px-3 py-1;
+            }
+        }
+        </style>
+        ''')
 
     def build(self):
         self.algorithm_select = ui.select(
@@ -43,7 +61,8 @@ class ModelTab:
         self.model_params.append(self.algorithm_select)
 
         self.model_params.append(
-            TagComponent.TagComponent()
+            ui.input_chips(label="Milestones", on_change=split_values, new_value_mode="add-unique",
+                           clearable=True).classes('milestone-chip w-full')
         )
 
         self.model_params.append(

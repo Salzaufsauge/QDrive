@@ -21,33 +21,44 @@ class EvalTab:
         self.running = False
 
     def start_eval(self):
+        self.eval_btn.set_visibility(False)
+        self.stop_btn.set_visibility(True)
+
         if self.config is None or self.config.model_path is None:
             ui.notify(
                 "No model loaded",
                 type="negative"
             )
+            self.stop_eval()
             return
 
         self.running = True
 
-        for frame in self.controller.start_eval(self.config):
-            if not self.running:
-                break
+        try:
+            for frame in self.controller.start_eval(self.config):
+                if not self.running:
+                    break
 
-            # expects numpy image frames
-            self.output.set_source(frame)
+                self.output.set_source(frame)
+        except Exception as e:
+            ui.notify(
+                str(e),
+                type="negative"
+            )
+            self.stop_eval()
+            return
 
     def stop_eval(self):
-        self.running = False
         self.controller.stop_eval()
+        self.running = False
 
         self.stop_btn.set_visibility(False)
         self.eval_btn.set_visibility(True)
 
-    def load_model(self):
+    def load_config(self, config_path):
         try:
             self.config = load_config(
-                self.config_path
+                config_path
             )
 
             model_path = self.config.abs_model_path
@@ -77,7 +88,7 @@ class EvalTab:
         model_loader.build_config_loader()
 
         model_loader.load_btn.on_click(
-            lambda: self.load_model()
+            lambda: self.load_config(model_loader.config.value)
         )
 
         self.model_loader_label = ui.label("")
@@ -86,7 +97,7 @@ class EvalTab:
         with ui.row().classes("w-full"):
             self.eval_btn = ui.button(
                 "Evaluate",
-                on_click=self.start
+                on_click=self.start_eval
             ).classes("flex-grow")
 
             self.stop_btn = ui.button(
@@ -97,11 +108,3 @@ class EvalTab:
             self.stop_btn.set_visibility(False)
 
         self.output = ui.image()
-
-    def start(self):
-        self.eval_btn.set_visibility(False)
-        self.stop_btn.set_visibility(True)
-
-        ui.run(
-            self.start_eval
-        )
