@@ -19,9 +19,9 @@ class TrainingTab:
         self.config_path = config_path
         self.config = None
 
-        self.env_tab = None
-        self.wrapper_tab = None
-        self.model_tab = None
+        self.env_tab = EnvTab()
+        self.wrapper_tab = WrapperTab()
+        self.model_tab = ModelTab()
 
         self.train_btn = None
         self.stop_btn = None
@@ -57,24 +57,19 @@ class TrainingTab:
         self.stop_btn.set_visibility(False)
         self.train_btn.set_visibility(True)
 
-    def load_config(self):
+    def load_config(self, config_path):
         try:
-            self.config = load_config(self.config_path)
-
+            self.config = load_config(config_path)
+            self.config_loader.load_label.set_visibility(True)
         except Exception as e:
             ui.notify(f"Error: {e}", type="negative")
             return
-
-        self.config_label.set_text(
-            f"Config {self.config_path} loaded"
-        )
-        self.config_label.set_visibility(True)
 
     def build(self):
         self.config_loader = ConfigLoader(self.config_path)
         self.config_loader.build_config_loader()
         self.config_loader.load_btn.on_click(
-            lambda: self.load_config()
+            lambda: self.load_config(self.config_loader.config.value)
         )
 
         with ui.tabs().classes('w-full justify-center') as tabs:
@@ -84,15 +79,13 @@ class TrainingTab:
 
         with ui.tab_panels(tabs, value=env_tab_btn).classes('w-full flex-grow'):
             with ui.tab_panel(env_tab_btn):
-                self.env_tab = EnvTab()
                 self.env_tab.build()
 
             with ui.tab_panel(wrapper_tab_btn):
-                self.wrapper_tab = WrapperTab()
                 self.wrapper_tab.build()
+                wrapper_tab_btn.on('click', lambda: self.wrapper_tab.init_sortable)
 
             with ui.tab_panel(model_tab_btn):
-                self.model_tab = ModelTab()
                 self.model_tab.build()
 
                 self.model_container = ui.column().classes('w-full')
@@ -122,9 +115,6 @@ class TrainingTab:
         ).classes('w-full')
 
         self.stop_btn.set_visibility(False)
-
-        self.config_label = ui.label("")
-        self.config_label.set_visibility(False)
 
         with ui.expansion(
                 "Training Output",

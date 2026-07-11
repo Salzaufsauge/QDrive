@@ -9,7 +9,7 @@ from frontend.components.config_loader import ConfigLoader
 
 class EvalTab:
     def __init__(self, controller: Controller, config_path: Path):
-        self.model_loader_label = None
+        self.config_loader = None
         self.controller = controller
         self.config = None
         self.config_path = config_path
@@ -67,11 +67,7 @@ class EvalTab:
                 raise FileNotFoundError(
                     f"Model {model_path} not found"
                 )
-
-            self.model_loader_label.set_text(
-                f"Model {model_path} loaded"
-            )
-            self.model_loader_label.set_visibility(True)
+            self.config_loader.load_label.set_visibility(True)
 
         except Exception as e:
             ui.notify(
@@ -81,14 +77,14 @@ class EvalTab:
 
     def build(self):
 
-        model_loader = ConfigLoader(
+        self.config_loader = ConfigLoader(
             self.config_path
         )
 
-        model_loader.build_config_loader()
+        self.config_loader.build_config_loader()
 
-        model_loader.load_btn.on_click(
-            lambda: self.load_config(model_loader.config.value)
+        self.config_loader.load_btn.on_click(
+            lambda: self.load_config(self.config_loader.config.value)
         )
 
         self.model_loader_label = ui.label("")

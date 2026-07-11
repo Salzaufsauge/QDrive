@@ -36,18 +36,19 @@ class ConfigLoader:
         with ui.row().classes("w-full"):
             self.config = ui.select(
                 options=configs,
-                label="Model",
+                label="Config",
                 value=None,
+                on_change=lambda x: self.load_label.set_visibility(False),
                 clearable=True
             ).classes("flex-grow")
 
             with ui.column().classes("flex-grow"):
                 self.load_btn = ui.button(
-                    "Load Model"
+                    "Load Config"
                 ).classes("flex-grow w-full")
 
                 self.load_label = ui.label(
-                    "Model Loaded"
+                    "Config Loaded"
                 ).classes("flex-grow w-full")
 
                 self.load_label.set_visibility(False)
