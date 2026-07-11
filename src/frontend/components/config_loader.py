@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import gradio as gr
+from nicegui import ui
 
 
 class ConfigLoader:
@@ -10,18 +10,49 @@ class ConfigLoader:
         self.config = None
         self.config_path = config_path
 
+        self.timer = None
 
-    def refresh_models(self, current_model):
-        choices = [str(p.relative_to(self.config_path.parent)) for p in self.config_path.glob("**/*.yaml")]
-        return gr.update(choices=choices, value=current_model)
+    def refresh_configs(self):
+        choices = [
+            str(p.relative_to(self.config_path.parent))
+            for p in self.config_path.glob("**/*.yaml")
+        ]
+
+        current = self.config.value
+
+        self.config.options = choices
+
+        if current in choices:
+            self.config.value = current
+
+        self.config.update()
 
     def build_config_loader(self):
-        models = [str(p.relative_to(self.config_path.parent)) for p in self.config_path.glob("**/*.yaml")]
-        with gr.Row(equal_height=True):
-            self.config = gr.Dropdown(label="Model", choices=models, value=None, interactive=True)
-            with gr.Column():
-                self.load_btn = gr.Button("Load Model")
-                self.load_label = gr.Label(value="Model Loaded", visible=False)
+        configs = [
+            str(p.relative_to(self.config_path.parent))
+            for p in self.config_path.glob("**/*.yaml")
+        ]
 
-        timer = gr.Timer(5)
-        timer.tick(self.refresh_models, inputs=[self.config], outputs=[self.config])
+        with ui.row().classes("w-full"):
+            self.config = ui.select(
+                options=configs,
+                label="Model",
+                value=None,
+                clearable=True
+            ).classes("flex-grow")
+
+            with ui.column().classes("flex-grow"):
+                self.load_btn = ui.button(
+                    "Load Model"
+                ).classes("flex-grow w-full")
+
+                self.load_label = ui.label(
+                    "Model Loaded"
+                ).classes("flex-grow w-full")
+
+                self.load_label.set_visibility(False)
+
+        self.timer = ui.timer(
+            5.0,
+            self.refresh_configs
+        )

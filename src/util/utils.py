@@ -1,9 +1,8 @@
 import ast
-from collections.abc import Callable
 from pathlib import Path
 
-import gradio as gr
 import gymnasium as gym
+from nicegui import ui
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
 
@@ -96,10 +95,12 @@ def parse_params(data):
     return parse_lambda(data)
 
 
-def build_ui_params(params: list, elem_per_row: int, action: Callable):
-    temp = list()
+def build_ui_params(params: list, elem_per_row: int, action):
+    temp = []
+
     for i in range(0, len(params), elem_per_row):
-        with gr.Row():
+        with ui.row().classes("w-full"):
             for param in params[i:i + elem_per_row]:
                 temp.append(action(param=param))
+
     return temp

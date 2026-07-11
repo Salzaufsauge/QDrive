@@ -9,10 +9,10 @@ from functools import cache
 from itertools import chain
 from typing import get_origin
 
-import gradio as gr
 import gymnasium
 import sb3_contrib
 import stable_baselines3 as sb3
+from nicegui import ui
 from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.off_policy_algorithm import OffPolicyAlgorithm
 from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
@@ -29,10 +29,10 @@ def iter_modules(package):
 
 def make_ui_for_param(param, value=None, visible=True):
     ann = param.annotation
-
     args = typing.get_args(ann)
 
     val = param.default if value is None else value
+    val = None if val is inspect.Parameter.empty else val
 
     if callable(val):
         val = inspect.getsource(val).strip()
@@ -40,41 +40,99 @@ def make_ui_for_param(param, value=None, visible=True):
     if args:
         ann = unwrap_optional(ann)
 
-        if any(get_origin(a) is collections.abc.Callable or a is typing.Callable for a in args):
-            return gr.Textbox(label=param.name, value=val, interactive=True, visible=visible)
+        if any(
+                typing.get_origin(a) is collections.abc.Callable
+                or a is typing.Callable
+                for a in args
+        ):
+            elem = ui.textarea(
+                label=param.name,
+                value=str(val) if val is not None else ''
+            )
 
-    origin = get_origin(ann)
+            elem.set_visibility(visible)
+            return elem.classes('flex-grow')
+
+    origin = typing.get_origin(ann)
 
     if ann is str:
-        return gr.Textbox(label=param.name, value=val, interactive=True, visible=visible)
+        elem = ui.input(
+            label=param.name,
+            value=val
+        )
 
-    if ann is int:
-        return gr.Number(label=param.name, value=val, interactive=True, visible=visible)
+    elif ann is int:
+        elem = ui.number(
+            label=param.name,
+            value=val
+        )
 
-    if ann is float:
-        return gr.Number(label=param.name, value=val, interactive=True, visible=visible)
+    elif ann is float:
+        elem = ui.number(
+            label=param.name,
+            value=val
+        )
 
-    if ann is bool:
-        return gr.Checkbox(label=param.name, value=val, interactive=True, visible=visible)
+    elif ann is bool:
+        elem = ui.checkbox(
+            text=param.name,
+            value=val
+        )
 
-    if origin is dict:
-        return gr.Dataframe(label=param.name, value=val, headers=["key", "value"], type="array",
-                            interactive=True, visible=visible)
+    elif origin is dict:
+        rows = [
+            {"key": k, "value": v}
+            for k, v in (val or {}).items()
+        ]
 
-    if origin is typing.Callable:
-        return gr.Textbox(label=param.name, value=val, interactive=True, visible=visible)
+        elem = ui.table(
+            columns=[
+                {"name": "key", "label": "key", "field": "key"},
+                {"name": "value", "label": "value", "field": "value"},
+            ],
+            rows=rows
+        )
 
-    if isinstance(val, bool):
-        return gr.Checkbox(label=param.name, value=val, interactive=True, visible=visible)
+    elif origin is typing.Callable:
+        elem = ui.textarea(
+            label=param.name,
+            value=str(val) if val is not None else ''
+        )
 
-    if isinstance(val, numbers.Number):
-        return gr.Number(label=param.name, value=val, interactive=True, visible=visible)
+    elif isinstance(val, bool):
+        elem = ui.checkbox(
+            text=param.name,
+            value=val
+        )
 
-    if param.name.endswith("keys"):
-        return gr.Dataframe(label=param.name, headers=["key", "value"], type="array",
-                            interactive=True, visible=visible)
+    elif isinstance(val, numbers.Number):
+        elem = ui.number(
+            label=param.name,
+            value=val
+        )
 
-    return gr.Textbox(label=f"{param.name} (unknown type)", value=val, interactive=True, visible=visible)
+    elif param.name.endswith("keys"):
+        rows = [
+            {"key": k, "value": v}
+            for k, v in (val or {}).items()
+        ]
+
+        elem = ui.table(
+            columns=[
+                {"name": "key", "label": "key", "field": "key"},
+                {"name": "value", "label": "value", "field": "value"},
+            ],
+            rows=rows
+        )
+
+    else:
+        elem = ui.input(
+            label=f"{param.name} (unknown type)",
+            value=str(val) if val is not None else ''
+        )
+
+    elem.set_visibility(visible)
+    return elem.classes('flex-grow')
 
 
 @cache
