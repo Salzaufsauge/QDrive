@@ -45,7 +45,7 @@ def make_ui_for_param(param, value=None, visible=True):
                 or a is typing.Callable
                 for a in args
         ):
-            elem = ui.textarea(
+            elem = ui.input(
                 label=param.name,
                 value=str(val) if val is not None else ''
             )

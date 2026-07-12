@@ -1,6 +1,7 @@
 import inspect
 from datetime import datetime
 
+from nicegui import ui
 from stable_baselines3.common.env_util import make_vec_env
 
 from backend.config.config import ExperimentConfig
@@ -12,7 +13,7 @@ from util.utils import replace_empty_strings, parse_val, get_config_path
 def build_config(params, sig_params):
     temp = dict()
     for key in sig_params.keys():
-        val = params.pop(0)
+        val = unwrap_ui_elem(params.pop(0))
         if val is not None:
             if key.endswith("kwargs"):
                 temp[key] = {row[0]: parse_val(row[1]) for row in val if row and row[1] not in [None, ""]}
@@ -20,24 +21,39 @@ def build_config(params, sig_params):
                 temp[key] = parse_val(val)
     return temp
 
-
 def build_wrapper_config(params: list, env_wrappers: dict):
     wrappers = load_env_wrappers()
-    for wrapper_name, wrapper_cls in wrappers.items():
-        wrapper_params = inspect.signature(wrapper_cls).parameters
-        if params.pop(0):
-            env_wrappers[wrapper_name] = build_config(params, wrapper_params)
+    while True:
+        next = params[0]
+        if isinstance(next, ui.checkbox):
+            trimmed_name = next.text.removeprefix("Enable ")
+            if trimmed_name in wrappers:
+                if unwrap_ui_elem(params.pop(0)):
+                    wrapper_params = inspect.signature(wrappers[trimmed_name]).parameters
+                    env_wrappers[trimmed_name] = build_config(params, wrapper_params)
         else:
-            for _ in wrapper_params.values():
-                params.pop(0)
+            break
 
+
+def unwrap_ui_elem(elem):
+    if isinstance(elem, (ui.input, ui.checkbox, ui.number, ui.textarea, ui.select, ui.input_chips)):
+        return elem.value
+    if isinstance(elem, ui.label):
+        return elem.text
+    if isinstance(elem, ui.table):
+        return {
+            row["key"]: row["value"]
+            for row in elem.rows
+        }
+
+    raise ValueError(f"Not a known ui element: {type(elem).__name__}")
 
 class ConfigBuilder:
     @staticmethod
     def write_config(params: list):
         conf = dict()
         try:
-            config_path = params.pop(0)
+            config_path = unwrap_ui_elem(params.pop(0))
             if config_path is not None:
                 return load_config(config_path)
             conf["env_param"] = dict()
@@ -46,13 +62,13 @@ class ConfigBuilder:
             env_wrappers = conf["env_wrappers"] = dict()
             build_wrapper_config(params, env_wrappers)
             conf["model_param"] = dict()
-            conf["algorithm"] = params.pop(0)
-            conf["milestones"] = sorted(list(params.pop(0)))
-            conf["total_timesteps"] = params.pop(0)
+            conf["algorithm"] = unwrap_ui_elem(params.pop(0))
+            conf["milestones"] = sorted(list(unwrap_ui_elem(params.pop(0))))
+            conf["total_timesteps"] = unwrap_ui_elem(params.pop(0))
             conf["callback_params"] = dict()
-            conf["callback_params"]["eval_freq"] = params.pop(0)
-            conf["callback_params"]["n_eval_episodes"] = params.pop(0)
-            conf["callback_params"]["deterministic"] = params.pop(0)
+            conf["callback_params"]["eval_freq"] = unwrap_ui_elem(params.pop(0))
+            conf["callback_params"]["n_eval_episodes"] = unwrap_ui_elem(params.pop(0))
+            conf["callback_params"]["deterministic"] = unwrap_ui_elem(params.pop(0))
             model_params = inspect.signature(load_algorithms()[conf["algorithm"]]).parameters
             conf["model_param"] = conf["model_param"] | build_config(params, model_params)
             conf[

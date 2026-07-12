@@ -136,14 +136,14 @@ class TrainingTab:
     def train(self):
         try:
             self.setup_config(
-                *self.config_loader.config.value,
-                *self.env_tab.get_env_params(),
+                *[self.config_loader.config],
+                *self.env_tab.env_params,
                 *self.wrapper_tab.wrapper_params,
                 *self.model_tab.model_params,
             )
 
-        except Exception:
-            return
+        except Exception as e:
+            raise e
 
         self.train_btn.set_visibility(False)
         self.stop_btn.set_visibility(True)
