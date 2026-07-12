@@ -83,7 +83,6 @@ class TrainingTab:
 
             with ui.tab_panel(wrapper_tab_btn):
                 self.wrapper_tab.build()
-                wrapper_tab_btn.on('click', lambda: self.wrapper_tab.init_sortable)
 
             with ui.tab_panel(model_tab_btn):
                 self.model_tab.build()
