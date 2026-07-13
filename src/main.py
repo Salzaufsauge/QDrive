@@ -6,7 +6,7 @@ from pathlib import Path
 from backend.config.storage import load_config
 from backend.controller import Controller
 from frontend import Editor
-from util.teestream import TeeStream
+from util.teestream import TeeStream, StreamType
 from util.utils import get_project_root
 
 
@@ -22,13 +22,13 @@ def main(args):
     else:
         log_queue = queue.Queue()
 
+        sys.stdout = TeeStream(sys.stdout, StreamType.STDOUT, log_queue)
+        sys.stderr = TeeStream(sys.stderr, StreamType.STDERR, log_queue)
+
         config_path = get_project_root() / "experiments"
         controller = Controller()
-        Editor(controller, log_queue=log_queue, config_path=config_path).launch()
-
-        sys.stdout = TeeStream(sys.stdout, log_queue)
-        sys.stderr = TeeStream(sys.stderr, log_queue)
-
+        editor = Editor(controller, log_queue=log_queue, config_path=config_path)
+        editor.launch()
 
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser()

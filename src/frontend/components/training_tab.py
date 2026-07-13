@@ -11,6 +11,7 @@ from frontend.components.config_loader import ConfigLoader
 from frontend.components.env_tab import EnvTab
 from frontend.components.model_tab import ModelTab
 from frontend.components.wrapper_tab import WrapperTab
+from util.teestream import StreamType
 
 
 class TrainingTab:
@@ -166,7 +167,12 @@ class TrainingTab:
 
     def consume_log(self):
         while not self.log_queue.empty():
-            self.console.push(self.log_queue.get())
+            msg = self.log_queue.get()
+            match msg.stream_type:  # for now this suffices for the console
+                case StreamType.STDERR:
+                    self.console.push(msg.message, classes='text-red')
+                case StreamType.STDOUT:
+                    self.console.push(msg.message)
 
     def train(self):
         try:

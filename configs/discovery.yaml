@@ -1,0 +1,8 @@
+algorithms:
+  - stable_baselines3
+  - sb3_contrib
+env_wrappers:
+  - gymnasium
+  - rl_zoo3
+  - stable_baselines3
+  - sb3_contrib

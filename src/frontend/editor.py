@@ -54,7 +54,9 @@ class Editor:
                         self.eval_tab.build()
 
     def launch(self):
-        self.build()
+        @ui.page("/")
+        def index():
+            self.build()
 
         ui.run(
             title="QDrive Training UI",

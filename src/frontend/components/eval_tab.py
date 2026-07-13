@@ -1,3 +1,4 @@
+import base64
 import threading
 from pathlib import Path
 
@@ -9,9 +10,12 @@ from backend.controller import Controller
 from frontend.components.config_loader import ConfigLoader
 from util.utils import frame_to_data_url
 
+black_1px = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAA1JREFUGFdjYGBg+A8AAQQBAHAgZQsAAAAASUVORK5CYII='
+placeholder = Response(content=base64.b64decode(black_1px.encode('ascii')), media_type='image/png')
 
 class EvalTab:
     def __init__(self, controller: Controller, config_path: Path):
+        self.model_loader_label = None
         self.config_loader = None
         self.controller = controller
         self.config = None
@@ -110,11 +114,10 @@ class EvalTab:
         async def get_frame() -> Response:
             frame = self.controller.get_current_frame()
             if frame is None:
-                print("No frame available")
-                return Response(status_code=204)
+                return placeholder
             jpeg = await run.cpu_bound(frame_to_data_url, frame)
             return Response(jpeg, media_type='image/jpeg')
 
         with ui.row().classes('w-full justify-center'):
             self.output = ui.interactive_image('video/frame').classes('w-[640px] h-[480px] object-contain')
-            ui.timer(0.1, self.output.force_reload)
+            ui.timer(0.01, self.output.force_reload)

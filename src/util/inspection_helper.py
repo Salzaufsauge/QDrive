@@ -7,12 +7,10 @@ import types
 import typing
 import uuid
 from functools import cache
-from itertools import chain
 from typing import get_origin
 
 import gymnasium
-import sb3_contrib
-import stable_baselines3 as sb3
+import yaml
 from nicegui import ui
 from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.off_policy_algorithm import OffPolicyAlgorithm
@@ -20,12 +18,33 @@ from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
 from stable_baselines3.common.policies import BasePolicy
 from stable_baselines3.common.vec_env import VecEnvWrapper
 
+import util.utils
+
+
+@cache
+def load_discovery():
+    return yaml.safe_load((util.utils.get_project_root() / "configs/discovery.yaml").read_text())
 
 def iter_modules(package):
     for _, modname, _ in pkgutil.walk_packages(
             package.__path__, package.__name__ + "."
     ):
         yield modname
+
+
+def discover_classes(packages, predicate):
+    found = {}
+
+    for package in packages:
+        for modname in iter_modules(resolve_name(package)):
+            try:
+                module = importlib.import_module(modname)
+            except Exception:
+                continue
+            for name, obj in inspect.getmembers(module, inspect.isclass):
+                if predicate(name, obj):
+                    found[name] = obj
+    return found
 
 
 def add_table(table_name, table_data):
@@ -69,8 +88,6 @@ def add_table(table_name, table_data):
     rm_btn.on_click(delete_selected)
 
     return grid
-
-
 
 
 def make_ui_for_param(param, value=None, visible=True):
@@ -171,24 +188,14 @@ def make_ui_for_param(param, value=None, visible=True):
 
 @cache
 def load_algorithms():
-    algos = {}
+    discovery = load_discovery()["algorithms"]
 
-    for modname in chain(iter_modules(sb3), iter_modules(sb3_contrib)):
-        try:
-            module = importlib.import_module(modname)
-        except Exception:
-            continue
-
-        for name, obj in inspect.getmembers(module, inspect.isclass):
-            if (
-                    issubclass(obj, BaseAlgorithm)
-                    and obj is not BaseAlgorithm
-                    and obj is not OffPolicyAlgorithm
-                    and obj is not OnPolicyAlgorithm
-            ):
-                algos[name] = obj
-
-    return algos
+    return discover_classes(discovery, lambda _, obj:
+    issubclass(obj, BaseAlgorithm)
+    and obj is not BaseAlgorithm
+    and obj is not OffPolicyAlgorithm
+    and obj is not OnPolicyAlgorithm
+                            )
 
 
 @cache
@@ -223,29 +230,16 @@ def unwrap_optional(annotation):
 
 @cache
 def load_env_wrappers():
-    wrappers = {}
+    discovery = load_discovery()["env_wrappers"]
 
-    for modname in chain(
-            iter_modules(sb3.common),
-            iter_modules(sb3_contrib),
-            iter_modules(gymnasium.wrappers)
-    ):
-        try:
-            module = importlib.import_module(modname)
-        except Exception:
-            continue
+    wrappers = discover_classes(discovery, lambda _, obj:
+    issubclass(obj, gymnasium.Wrapper)
+    and obj is not gymnasium.Wrapper or
+    issubclass(obj, VecEnvWrapper)
+    and obj is not VecEnvWrapper
+                                )
 
-        for name, obj in inspect.getmembers(module, inspect.isclass):
-            if (
-                    issubclass(obj, gymnasium.Wrapper)
-                    and obj is not gymnasium.Wrapper
-            ) or (
-                    issubclass(obj, VecEnvWrapper)
-                    and obj is not VecEnvWrapper
-            ):
-                wrappers[name] = obj
-
-    return wrappers
+    return dict(sorted(wrappers.items(), key=lambda x: 0 if issubclass(x[1], VecEnvWrapper) else 1))
 
 
 def resolve_name(name):

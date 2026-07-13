@@ -42,6 +42,7 @@ class Train:
         )
 
         env = build_env(config, EnvMode.TRAIN)
+        eval_env = build_env(config, EnvMode.EVAL)
 
         try:
             model_param = config.model_params
@@ -54,18 +55,19 @@ class Train:
             else:
                 model = model_class(**(model_param | dict(env=env, tensorboard_log=get_project_root() / "logs")))
 
-            eval_env = build_env(config, EnvMode.EVAL)
-
             streaming_callback = StreamingCallback(self, self.state, eval_env, eval_freq=max(
                 config.callback_params["eval_freq"] // config.env_params.get("n_envs"), 1),
                                                    n_eval_episodes=config.callback_params["n_eval_episodes"],
                                                    deterministic=config.callback_params["deterministic"])
-            milestone_callback = MilestoneCallback(self, eval_env, config.milestones)
+            milestone_callback = MilestoneCallback(self, eval_env, config.milestones) if config.milestones else None
             wandb_callback = WandbCallback(
                 gradient_save_freq=1000,
                 verbose=2,
             )
-            callback = CallbackList([streaming_callback, milestone_callback, wandb_callback])
+            callbacks = [streaming_callback, wandb_callback]
+            if milestone_callback:
+                callbacks.append(milestone_callback)
+            callback = CallbackList(callbacks)
 
             model.learn(total_timesteps=config.config.get("total_timesteps"), tb_log_name=self.run.id,
                         callback=callback)
@@ -85,6 +87,7 @@ class Train:
             log("ERROR", f"Training failed: {e}")
         finally:
             env.close()
+            eval_env.close()
             self.running.clear()
 
     def stop(self):

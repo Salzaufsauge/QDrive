@@ -36,7 +36,7 @@ class Evaluate:
 
                     yield frame
 
-                if done:
+                if done.any():
                     obs = env.reset()
         finally:
             self.running.clear()
@@ -49,5 +49,4 @@ class Evaluate:
         with self.frame_lock:
             if self.current_frame is None:
                 return None
-            print(self.current_frame.shape)
-            return self.current_frame.copy()
+            return self.current_frame

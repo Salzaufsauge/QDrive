@@ -10,6 +10,7 @@ from util.utils import build_ui_params
 
 _dragged: Draggable | None = None
 
+
 def make_wrapper_ui(param: inspect.Parameter):
     if param.name in ["env", "venv"]:
         elem = ui.label("skip")
@@ -18,20 +19,34 @@ def make_wrapper_ui(param: inspect.Parameter):
 
     return make_ui_for_param(param)
 
+
 class WrapperTab:
     def __init__(self):
         self.wrappers = load_env_wrappers()
-
         self.wrapper_items = []
-
         self.wrapper_container = None
+        self.search = ""
+        self.only_active = None
+        self.parent_filter = None
+        self.module_filter = None
 
     def build(self):
         self.wrapper_items = []
 
+        with ui.row().classes("w-full"):
+            ui.checkbox("Only active wrappers", on_change=lambda e: self.set_filter_active(e.value)).classes(
+                "flex-grow")
+            ui.input("Search wrappers", on_change=lambda e: self.apply_filters(e.value)).classes("flex-grow")
+            self.parent_filter = ui.select(options=[], label="Filter wrapper type", multiple=True, clearable=True,
+                                           on_change=lambda e: self.apply_filters()).classes("flex-grow")
+            self.module_filter = ui.select(options=[], label="Filter module", multiple=True, clearable=True,
+                                           on_change=lambda e: self.apply_filters()).classes("flex-grow")
+
         with Column().classes('w-full') as self.wrapper_container:
             for wrapper_name, wrapper_cls in self.wrappers.items():
                 self.add_wrapper(wrapper_name, wrapper_cls)
+        self.parent_filter.set_options(self.get_available_parents())
+        self.module_filter.set_options(self.available_modules())
 
     @property
     def wrapper_params(self):
@@ -48,6 +63,13 @@ class WrapperTab:
     def add_wrapper(self, wrapper_name, wrapper_cls):
         item = {
             "name": wrapper_name,
+            "cls": wrapper_cls,
+            "module": wrapper_cls.__module__,
+            "parents": [
+                cls.__name__
+                for cls in wrapper_cls.__mro__[1:]
+                if cls is not object
+            ],
             "active": False,
             "params": [],
             "element": None,
@@ -109,6 +131,59 @@ class WrapperTab:
         ui.notify(
             f"{item['name']} moved"
         )
+
+    def available_modules(self):
+        return sorted({
+            item["module"]
+            for item in self.wrapper_items
+        })
+
+    def get_available_parents(self):
+        parents = set()
+
+        for item in self.wrapper_items:
+            parents.update(item["parents"])
+
+        return list(parents)
+
+    def set_filter_active(self, active):
+        self.only_active = active
+        self.apply_filters()
+
+    def apply_filters(self, text=None):
+        if text is not None:
+            self.search = text.lower()
+
+        parents = (
+            self.parent_filter.value
+            if hasattr(self, "parent_filter")
+            else None
+        )
+
+        modules = (
+            self.module_filter.value
+            if hasattr(self, "module_filter")
+            else None
+        )
+
+        for item in self.wrapper_items:
+            visible = True
+
+            if self.search:
+                visible &= (
+                        self.search in item["name"].lower()
+                )
+
+            if self.only_active:
+                visible &= item["active"]
+
+            if parents:
+                visible &= any(parent in item["parents"] for parent in parents)
+
+            if modules:
+                visible &= any(module == item["module"] for module in modules)
+
+            item["element"].set_visibility(visible)
 
 
 # Taken from https://github.com/zigai/nicegui-extensions and slightly modified

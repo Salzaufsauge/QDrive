@@ -49,7 +49,7 @@ class ModelTab:
             }
         }
         </style>
-        ''')
+        ''', shared=True)
 
     def build(self):
         self.algorithm_select = ui.select(

@@ -28,7 +28,6 @@ def get_project_root():
 def load_overrides():
     return yaml.safe_load((get_project_root() / "configs/overrides.yaml").read_text())
 
-
 def get_vec_env_class(cls):
     match cls:
         case "DummyVecEnv":
@@ -102,7 +101,7 @@ def parse_lambda(s):
 
     if isinstance(tree.body, ast.Lambda):
         validate_ast(tree)
-        return eval(compile(tree, "<lambda>", "eval"))
+        return eval(compile(tree, "<lambda>", "eval"), {"__builtins__": {}})
 
     try:
         if isinstance(tree.body, (ast.Name, ast.Attribute)):
