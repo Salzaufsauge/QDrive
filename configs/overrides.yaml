@@ -1,0 +1,8 @@
+eval:
+  env_wrappers:
+    VecNormalize:
+      training: false
+train:
+  env_wrappers:
+    VecNormalize:
+      training: true

@@ -21,4 +21,7 @@ class Controller:
         self.eval.stop()
 
     def get_training_state(self):
-        yield from self.training.get_state()
+        return self.training.get_state()
+
+    def get_current_frame(self):
+        return self.eval.get_current_frame()

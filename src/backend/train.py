@@ -1,6 +1,5 @@
 import copy
 import threading
-import time
 
 import wandb
 from stable_baselines3.common.callbacks import CallbackList
@@ -10,7 +9,7 @@ from backend.callbacks import MilestoneCallback
 from backend.callbacks import StreamingCallback
 from backend.config.config import ExperimentConfig
 from backend.env.env_manager import build_env, EnvMode
-from backend.state.train_state import TrainState
+from backend.state.train_state import TrainState, log
 from util.inspection_helper import load_algorithms
 from util.utils import get_project_root
 
@@ -28,11 +27,15 @@ class Train:
         self.state = TrainState()
         self.config = copy.deepcopy(config)
 
-        self.state.log("INFO", "Starting training")
+        log("INFO", "Starting training")
+        log("INFO", f"Training config: {config.config}")
+
+        run_name: str = config.model_path.removeprefix("models/").replace(".zip", "").replace("model-", "")
+
         self.run = wandb.init(
             project="QDrive",
             config=config.config,
-            name=config.model_path.replace(".zip", ""),
+            name=run_name,
             dir=get_project_root(),
             sync_tensorboard=True,
             monitor_gym=True,
@@ -45,8 +48,11 @@ class Train:
             model_class = self.algorithms.get(config.algorithm)
             if config.abs_model_path.exists():
                 model = model_class.load(env=env, path=config.abs_model_path)
+                vecnorm = model.get_vec_normalize_env()
+                if vecnorm is not None:
+                    vecnorm.load(str(config.abs_model_path).replace(".zip", ".pkl"), venv=vecnorm)
             else:
-                model = model_class(env=env, tensorboard_log=get_project_root() / "logs", **model_param)
+                model = model_class(**(model_param | dict(env=env, tensorboard_log=get_project_root() / "logs")))
 
             eval_env = build_env(config, EnvMode.EVAL)
 
@@ -64,7 +70,7 @@ class Train:
             model.learn(total_timesteps=config.config.get("total_timesteps"), tb_log_name=self.run.id,
                         callback=callback)
 
-            self.state.log("INFO", "Training finished")
+            log("INFO", "Training finished")
 
             artifact = wandb.Artifact(f"run-{self.run.id}-config", type="config")
             artifact.add_file(
@@ -76,25 +82,15 @@ class Train:
         except Exception as e:
             if self.run is not None:
                 self.run.finish(1)
-            self.state.log("ERROR", f"Training failed: {e}")
+            log("ERROR", f"Training failed: {e}")
         finally:
             env.close()
             self.running.clear()
 
     def stop(self):
         if self.state is not None:
-            self.state.log("INFO", "Stopping training")
+            log("INFO", "Stopping training")
         self.running.clear()
 
     def get_state(self):
-        self.running.wait()
-        while self.running.is_set():
-            yield [
-                "\n".join(self.state.get_logs()),
-                self.state.reward_fig()
-            ]
-            time.sleep(10.0)
-        yield [
-            "\n".join(self.state.get_logs()),
-            self.state.reward_fig()
-        ]
+        return self.state.reward_fig()

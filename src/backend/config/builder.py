@@ -6,7 +6,7 @@ from stable_baselines3.common.env_util import make_vec_env
 
 from backend.config.config import ExperimentConfig
 from backend.config.storage import load_config
-from util.inspection_helper import load_algorithms, load_env_wrappers
+from util.inspection_helper import load_algorithms, load_env_wrappers, unwrap_optional
 from util.utils import replace_empty_strings, parse_val, get_config_path
 
 
@@ -15,8 +15,13 @@ def build_config(params, sig_params):
     for key in sig_params.keys():
         val = unwrap_ui_elem(params.pop(0))
         if val is not None:
+            ann = unwrap_optional(sig_params[key].annotation)
+
+            if ann is int:
+                val = int(val)
+
             if key.endswith("kwargs"):
-                temp[key] = {row[0]: parse_val(row[1]) for row in val if row and row[1] not in [None, ""]}
+                temp[key] = {key: parse_val(value) for key, value in val.items() if key and value not in [None, ""]}
             else:
                 temp[key] = parse_val(val)
     return temp
@@ -40,10 +45,10 @@ def unwrap_ui_elem(elem):
         return elem.value
     if isinstance(elem, ui.label):
         return elem.text
-    if isinstance(elem, ui.table):
+    if isinstance(elem, ui.aggrid):
         return {
             row["key"]: row["value"]
-            for row in elem.rows
+            for row in elem.options["rowData"]
         }
 
     raise ValueError(f"Not a known ui element: {type(elem).__name__}")

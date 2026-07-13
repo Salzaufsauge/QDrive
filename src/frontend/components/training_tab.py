@@ -1,3 +1,4 @@
+import queue
 import threading
 from pathlib import Path
 
@@ -13,7 +14,7 @@ from frontend.components.wrapper_tab import WrapperTab
 
 
 class TrainingTab:
-    def __init__(self, controller: Controller, config_path: Path):
+    def __init__(self, controller: Controller, log_queue: queue.Queue, config_path: Path):
         self.config_loader = None
         self.controller = controller
         self.config_path = config_path
@@ -26,8 +27,14 @@ class TrainingTab:
         self.train_btn = None
         self.stop_btn = None
 
+        self.log_queue = log_queue
+
         self.console = None
         self.graph = None
+        self.figure = None
+        self.training_timer = None
+
+        self.training_thread = None
 
         self.model_container = None
 
@@ -39,17 +46,40 @@ class TrainingTab:
             raise
 
     def start_training(self):
-        thread = threading.Thread(
+        self.training_thread = threading.Thread(
             target=self.controller.start_training,
             args=(self.config,),
             daemon=True,
         )
-        thread.start()
+        self.training_thread.start()
 
     def get_training_state(self):
-        for state in self.controller.get_training_state():
-            if self.console:
-                self.console.value = state
+        if not self.training_thread.is_alive():
+            self.training_timer.cancel()
+        new_data = self.controller.get_training_state()
+        if new_data:
+            self.extend_plot(new_data)
+
+    def reset_plot(self, num_envs):
+        self.figure = {
+            'data': [],
+        }
+
+        for env_idx in range(num_envs):
+            self.figure['data'].append({'name': f'Env {env_idx}', 'type': 'scatter', 'x': [], 'y': []})
+
+        self.graph.update_figure(self.figure)
+
+    def extend_plot(self, data):
+        for episode in data:
+            env = episode["env_num"]
+
+            x = episode["timesteps"]
+            y = episode["reward"]
+
+            self.figure['data'][env]['x'].append(x)
+            self.figure['data'][env]['y'].append(y)
+            self.graph.run_plot_method('extendTraces', {'x': [[x]], 'y': [[y]]}, [env])
 
     def stop_training(self):
         self.controller.stop_training()
@@ -121,8 +151,7 @@ class TrainingTab:
         ).classes('w-full'):
             with ui.row().classes('w-full'):
                 self.console = (
-                    ui.textarea(label="Console")
-                    .props("readonly")
+                    ui.log()
                     .classes("flex-1")
                     .style("height: 400px")
                 )
@@ -132,6 +161,12 @@ class TrainingTab:
                     .classes("flex-1")
                     .style("height: 400px")
                 )
+
+        ui.timer(0.1, self.consume_log)
+
+    def consume_log(self):
+        while not self.log_queue.empty():
+            self.console.push(self.log_queue.get())
 
     def train(self):
         try:
@@ -148,4 +183,7 @@ class TrainingTab:
         self.train_btn.set_visibility(False)
         self.stop_btn.set_visibility(True)
 
+        self.reset_plot(self.config.env_params["n_envs"])
+
         self.start_training()
+        self.training_timer = ui.timer(10, self.get_training_state)

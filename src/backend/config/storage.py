@@ -14,9 +14,12 @@ def load_config(config_path: Path):
 
     return ExperimentConfig(yaml.safe_load(path.read_text()), config_path=config_path)
 
-
 def save_model(config: ExperimentConfig, model):
-    model_path = get_project_root() / config.model_path
+    model_path = config.abs_model_path
+    vecnorm = model.get_vec_normalize_env()
+    if vecnorm is not None:
+        vecnorm_path = str(model_path).replace(".zip", ".pkl")
+        vecnorm.save(vecnorm_path)
     model.save(model_path)
 
 

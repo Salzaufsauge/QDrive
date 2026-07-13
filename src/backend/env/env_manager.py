@@ -7,8 +7,9 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import VecEnv, DummyVecEnv, VecEnvWrapper
 
 from backend.config.config import ExperimentConfig
+from backend.state.train_state import log
 from util.inspection_helper import load_env_wrappers
-from util.utils import get_vec_env_class
+from util.utils import get_vec_env_class, load_overrides
 
 
 class EnvMode(Enum):
@@ -16,10 +17,12 @@ class EnvMode(Enum):
     EVAL = "eval"
 
 def build_env(config: ExperimentConfig, mode: EnvMode) -> VecEnv:
+    log("INFO", f"Building environment in mode: {mode.value}")
+
     env_config = copy.deepcopy(config.env_params)
     wrapper_config = copy.deepcopy(config.env_wrappers)
 
-    gym_wrappers, vec_env_wrappers = build_wrapper(wrapper_config)
+    gym_wrappers, vec_env_wrappers = build_wrapper(wrapper_config, mode)
 
     env_override = {
         "vec_env_cls": get_vec_env_class(env_config["vec_env_cls"]) if mode == EnvMode.TRAIN else DummyVecEnv,
@@ -34,18 +37,21 @@ def build_env(config: ExperimentConfig, mode: EnvMode) -> VecEnv:
     return env
 
 
-def build_wrapper(wrapper_config: dict):
+def build_wrapper(wrapper_config: dict, mode: EnvMode):
     wrappers = load_env_wrappers()
 
     gym_env_wrappers = list()
     vec_env_wrappers = list()
 
+    overrides: dict = load_overrides()[mode.value]["env_wrappers"]
+
     for wrapper_name, params in wrapper_config.items():
         wrapper_cls = wrappers[wrapper_name]
+        param_overrides = overrides.get(wrapper_name, {})
         if issubclass(wrapper_cls, gymnasium.Wrapper):
-            gym_env_wrappers.append(partial(wrapper_cls, **params))
+            gym_env_wrappers.append(partial(wrapper_cls, **(params | param_overrides)))
         elif issubclass(wrapper_cls, VecEnvWrapper):
-            vec_env_wrappers.append(partial(wrapper_cls, **params))
+            vec_env_wrappers.append(partial(wrapper_cls, **(params | param_overrides)))
         else:
             raise TypeError("Unknown wrapper type")
 

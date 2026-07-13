@@ -1,9 +1,12 @@
 import argparse
+import queue
+import sys
 from pathlib import Path
 
 from backend.config.storage import load_config
 from backend.controller import Controller
 from frontend import Editor
+from util.teestream import TeeStream
 from util.utils import get_project_root
 
 
@@ -17,9 +20,15 @@ def main(args):
             for _ in Controller().start_eval(configuration, mode=args.mode):
                 pass
     else:
+        log_queue = queue.Queue()
+
         config_path = get_project_root() / "experiments"
         controller = Controller()
-        Editor(controller, config_path=config_path).launch()
+        Editor(controller, log_queue=log_queue, config_path=config_path).launch()
+
+        sys.stdout = TeeStream(sys.stdout, log_queue)
+        sys.stderr = TeeStream(sys.stderr, log_queue)
+
 
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser()

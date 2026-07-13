@@ -1,17 +1,32 @@
 import ast
+import copy
+import sys
+import tempfile
+from functools import cache
 from pathlib import Path
 
+import cv2
 import gymnasium as gym
+import yaml
 from nicegui import ui
-from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, unwrap_vec_normalize, VecNormalize
+
+from util.inspection_helper import resolve_name
 
 
+@cache
 def get_envs():
     return sorted([env_id for env_id in gym.envs.registry.keys()])
 
 
+@cache
 def get_project_root():
     return Path(__file__).parent.parent.parent
+
+
+@cache
+def load_overrides():
+    return yaml.safe_load((get_project_root() / "configs/overrides.yaml").read_text())
 
 
 def get_vec_env_class(cls):
@@ -80,11 +95,21 @@ def parse_val(s: str):
 
 # useful for stuff like lr where a lambda can be passed
 def parse_lambda(s):
-    tree = ast.parse(str(s), mode="eval")
+    if not isinstance(s, str):
+        return s
+
+    tree = ast.parse(s, mode="eval")
 
     if isinstance(tree.body, ast.Lambda):
         validate_ast(tree)
         return eval(compile(tree, "<lambda>", "eval"))
+
+    try:
+        if isinstance(tree.body, (ast.Name, ast.Attribute)):
+            return resolve_name(s)
+    except Exception as e:
+        print(e, file=sys.stderr)
+        print(f"Using {s} as is")
 
     return s
 
@@ -104,3 +129,30 @@ def build_ui_params(params: list, elem_per_row: int, action):
                 temp.append(action(param=param))
 
     return temp
+
+
+def copy_vecnorm(model, target_env):
+    src = model.get_vec_normalize_env()
+    dst = unwrap_vec_normalize(target_env)
+    if src is None or dst is None:
+        return
+
+    try:
+        dst.obs_rms = copy.deepcopy(src.obs_rms)
+        dst.ret_rms = copy.deepcopy(src.ret_rms)
+    except Exception as e:  # Fallback for SubprocVecEnv
+        print(e)
+        print("Could not copy vecnorm, falling back to saving and loading")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            print(f"Copying vecnorm to {tmpdir}")
+            path = Path(tmpdir, "vecnormalize.pkl")
+            src.save(path)
+            dst = VecNormalize.load(str(path), dst.venv)
+            dst.training = False
+            dst.norm_obs = False
+            print("Copied vecnorm")
+
+
+def frame_to_data_url(frame):
+    _, imencode_image = cv2.imencode('.jpg', frame)
+    return imencode_image.tobytes()

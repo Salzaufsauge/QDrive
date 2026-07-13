@@ -1,3 +1,4 @@
+import queue
 from pathlib import Path
 
 from nicegui import ui
@@ -8,9 +9,10 @@ from frontend.components.training_tab import TrainingTab
 
 
 class Editor:
-    def __init__(self, controller: Controller, config_path: Path):
+    def __init__(self, controller: Controller, log_queue: queue.Queue, config_path: Path):
         self.training_tab = TrainingTab(
             controller,
+            log_queue=log_queue,
             config_path=config_path
         )
 
