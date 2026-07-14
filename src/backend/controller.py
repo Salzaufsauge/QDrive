@@ -1,3 +1,6 @@
+import sys
+import threading
+
 from backend.config.config import ExperimentConfig
 from backend.evaluate import Evaluate
 from backend.train import Train
@@ -7,21 +10,52 @@ class Controller:
     def __init__(self):
         self.training = Train()
         self.eval = Evaluate()
+        self.thread = None
 
     def start_training(self, config: ExperimentConfig):
-        return self.training.train(config)
+        self._start_thread(self.training.train, (config,))
+
+    def is_alive_and_training(self):
+        return self.thread is not None and self.thread.is_alive() and self.training.running.is_set()
+
+    def is_alive_and_eval(self):
+        return self.thread is not None and self.thread.is_alive() and self.eval.running.is_set()
 
     def stop_training(self):
-        self.training.stop()
+        self._stop_thread(self.training)
+
+    def stop_all(self):
+        try:
+            self._stop_thread(self.training)
+            self._stop_thread(self.eval)
+        except Exception as e:
+            print(e, file=sys.stderr)
 
     def start_eval(self, config: ExperimentConfig, mode: str = "rgb_array"):
-        yield from self.eval.evaluate(config, mode=mode)
+        self._start_thread(self.eval.evaluate, (config, mode))
 
     def stop_eval(self):
-        self.eval.stop()
+        self._stop_thread(self.eval)
 
     def get_training_state(self):
         return self.training.get_state()
 
     def get_current_frame(self):
         return self.eval.get_current_frame()
+
+    def _start_thread(self, target, args):  # for now allow only one of the modes to run
+        if self.thread is not None and self.thread.is_alive():
+            raise Exception("A thread is already running")
+        self.thread = threading.Thread(
+            target=target,
+            args=args,
+            daemon=True
+        )
+        self.thread.start()
+
+    def _stop_thread(self, target):
+        if self.thread is not None and self.thread.is_alive():
+            if target.running.is_set():
+                target.stop()
+            self.thread.join()
+            self.thread = None

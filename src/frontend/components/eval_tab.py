@@ -1,5 +1,4 @@
 import base64
-import threading
 from pathlib import Path
 
 from fastapi import Response
@@ -25,8 +24,6 @@ class EvalTab:
         self.stop_btn = None
         self.output = None
 
-        self.running = False
-
     def start_eval(self):
         self.eval_btn.set_visibility(False)
         self.stop_btn.set_visibility(True)
@@ -38,26 +35,10 @@ class EvalTab:
             )
             self.stop_eval()
             return
-        self.running = True
-        threading.Thread(target=self._eval_loop).start()
-
-    def _eval_loop(self):
-        try:
-
-            for _ in self.controller.start_eval(self.config):
-                if not self.running:
-                    break
-        except Exception as e:
-            ui.notify(
-                str(e),
-                type="negative"
-            )
-            self.stop_eval()
-            return
+        self.controller.start_eval(self.config)
 
     def stop_eval(self):
         self.controller.stop_eval()
-        self.running = False
 
         self.stop_btn.set_visibility(False)
         self.eval_btn.set_visibility(True)

@@ -32,19 +32,13 @@ class Train:
 
         run_name: str = config.model_path.removeprefix("models/").replace(".zip", "").replace("model-", "")
 
-        self.run = wandb.init(
-            project="QDrive",
-            config=config.config,
-            name=run_name,
-            dir=get_project_root(),
-            sync_tensorboard=True,
-            monitor_gym=True,
-        )
-
-        env = build_env(config, EnvMode.TRAIN)
-        eval_env = build_env(config, EnvMode.EVAL)
+        env = None
+        eval_env = None
 
         try:
+            env = build_env(config, EnvMode.TRAIN)
+            eval_env = build_env(config, EnvMode.EVAL)
+
             model_param = config.model_params
             model_class = self.algorithms.get(config.algorithm)
             if config.abs_model_path.exists():
@@ -54,6 +48,15 @@ class Train:
                     vecnorm.load(str(config.abs_model_path).replace(".zip", ".pkl"), venv=vecnorm)
             else:
                 model = model_class(**(model_param | dict(env=env, tensorboard_log=get_project_root() / "logs")))
+
+            self.run = wandb.init(
+                project="QDrive",
+                config=config.config,
+                name=run_name,
+                dir=get_project_root(),
+                sync_tensorboard=True,
+                monitor_gym=True,
+            )
 
             streaming_callback = StreamingCallback(self, self.state, eval_env, eval_freq=max(
                 config.callback_params["eval_freq"] // config.env_params.get("n_envs"), 1),
@@ -86,8 +89,19 @@ class Train:
                 self.run.finish(1)
             log("ERROR", f"Training failed: {e}")
         finally:
-            env.close()
-            eval_env.close()
+            if env is not None:
+                try:
+                    env.close()
+                except Exception:
+                    log("ERROR", "Failed to close training environment")
+            if eval_env is not None:
+                try:
+                    eval_env.close()
+                except Exception:
+                    log("ERROR", "Failed to close evaluation environment")
+            self.state = None
+            self.config = None
+            self.run = None
             self.running.clear()
 
     def stop(self):

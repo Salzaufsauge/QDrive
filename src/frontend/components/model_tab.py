@@ -40,6 +40,7 @@ class ModelTab:
         self.algorithms = load_algorithms()
         self.model_params = []
         self.model_params_base_len = 0
+        self.model_container = None
 
         ui.add_head_html('''
         <style type="text/tailwindcss">
@@ -96,6 +97,22 @@ class ModelTab:
                 )
 
         self.model_params_base_len = len(self.model_params)
+
+        self.model_container = ui.column().classes('w-full')
+
+        self.update_model_params(self.model_params[0])
+
+        self.model_params[0].on_value_change(
+            self.update_model_params
+        )
+
+    def update_model_params(self, e):
+        self.model_container.clear()
+
+        with self.model_container:
+            self.get_model_params(
+                e.value
+            )
 
     def get_model_params(self, algo):
         params = list(

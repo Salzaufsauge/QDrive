@@ -34,8 +34,6 @@ class Evaluate:
                     with self.frame_lock:
                         self.current_frame = frame
 
-                    yield frame
-
                 if done.any():
                     obs = env.reset()
         finally:

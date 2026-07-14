@@ -1,5 +1,4 @@
 import queue
-import threading
 from pathlib import Path
 
 from nicegui import ui
@@ -35,8 +34,6 @@ class TrainingTab:
         self.figure = None
         self.training_timer = None
 
-        self.training_thread = None
-
         self.model_container = None
 
     def setup_config(self, *params):
@@ -46,16 +43,8 @@ class TrainingTab:
             ui.notify(f"Error: {e}", type="negative")
             raise
 
-    def start_training(self):
-        self.training_thread = threading.Thread(
-            target=self.controller.start_training,
-            args=(self.config,),
-            daemon=True,
-        )
-        self.training_thread.start()
-
     def get_training_state(self):
-        if not self.training_thread.is_alive():
+        if not self.controller.is_alive_and_training():
             self.training_timer.cancel()
         new_data = self.controller.get_training_state()
         if new_data:
@@ -118,22 +107,6 @@ class TrainingTab:
             with ui.tab_panel(model_tab_btn):
                 self.model_tab.build()
 
-                self.model_container = ui.column().classes('w-full')
-
-                def update_model_params(e):
-                    self.model_container.clear()
-
-                    with self.model_container:
-                        self.model_tab.get_model_params(
-                            e.value
-                        )
-
-                update_model_params(self.model_tab.model_params[0])
-
-                self.model_tab.model_params[0].on_value_change(
-                    update_model_params
-                )
-
         self.train_btn = ui.button(
             "Train",
             on_click=self.train
@@ -186,10 +159,10 @@ class TrainingTab:
         except Exception as e:
             raise e
 
-        self.train_btn.set_visibility(False)
-        self.stop_btn.set_visibility(True)
-
         self.reset_plot(self.config.env_params["n_envs"])
 
-        self.start_training()
+        self.controller.start_training(self.config)
         self.training_timer = ui.timer(10, self.get_training_state)
+
+        self.train_btn.set_visibility(False)
+        self.stop_btn.set_visibility(True)

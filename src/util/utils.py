@@ -1,7 +1,6 @@
 import ast
 import copy
 import sys
-import tempfile
 from functools import cache
 from pathlib import Path
 
@@ -9,7 +8,7 @@ import cv2
 import gymnasium as gym
 import yaml
 from nicegui import ui
-from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, unwrap_vec_normalize, VecNormalize
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, unwrap_vec_normalize
 
 from util.inspection_helper import resolve_name
 
@@ -136,20 +135,11 @@ def copy_vecnorm(model, target_env):
     if src is None or dst is None:
         return
 
-    try:
+    if getattr(src, "obs_rms", None) is not None:
         dst.obs_rms = copy.deepcopy(src.obs_rms)
+
+    if getattr(src, "ret_rms", None) is not None:
         dst.ret_rms = copy.deepcopy(src.ret_rms)
-    except Exception as e:  # Fallback for SubprocVecEnv
-        print(e)
-        print("Could not copy vecnorm, falling back to saving and loading")
-        with tempfile.TemporaryDirectory() as tmpdir:
-            print(f"Copying vecnorm to {tmpdir}")
-            path = Path(tmpdir, "vecnormalize.pkl")
-            src.save(path)
-            dst = VecNormalize.load(str(path), dst.venv)
-            dst.training = False
-            dst.norm_obs = False
-            print("Copied vecnorm")
 
 
 def frame_to_data_url(frame):

@@ -68,7 +68,8 @@ class ConfigBuilder:
             build_wrapper_config(params, env_wrappers)
             conf["model_param"] = dict()
             conf["algorithm"] = unwrap_ui_elem(params.pop(0))
-            conf["milestones"] = sorted(list(unwrap_ui_elem(params.pop(0))))
+            milestones = unwrap_ui_elem(params.pop(0))
+            conf["milestones"] = sorted(milestones) if isinstance(milestones, list) else None
             conf["total_timesteps"] = unwrap_ui_elem(params.pop(0))
             conf["callback_params"] = dict()
             conf["callback_params"]["eval_freq"] = unwrap_ui_elem(params.pop(0))
