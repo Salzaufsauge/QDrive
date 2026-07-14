@@ -16,6 +16,7 @@ class EnvMode(Enum):
     TRAIN = "train"
     EVAL = "eval"
 
+
 def build_env(config: ExperimentConfig, mode: EnvMode) -> VecEnv:
     log("INFO", f"Building environment in mode: {mode.value}")
 
@@ -25,9 +26,11 @@ def build_env(config: ExperimentConfig, mode: EnvMode) -> VecEnv:
     gym_wrappers, vec_env_wrappers = build_wrapper(wrapper_config, mode)
 
     env_override = {
-        "vec_env_cls": get_vec_env_class(env_config["vec_env_cls"]) if mode == EnvMode.TRAIN else DummyVecEnv,
+        "vec_env_cls": get_vec_env_class(env_config["vec_env_cls"])
+        if mode == EnvMode.TRAIN
+        else DummyVecEnv,
         "n_envs": env_config["n_envs"] if mode == EnvMode.TRAIN else 1,
-        "wrapper_class": compose_gym_wrappers(gym_wrappers) if gym_wrappers else None
+        "wrapper_class": compose_gym_wrappers(gym_wrappers) if gym_wrappers else None,
     }
     env = make_vec_env(**(env_config | env_override))
 

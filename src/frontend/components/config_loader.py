@@ -39,21 +39,14 @@ class ConfigLoader:
                 label="Config",
                 value=None,
                 on_change=lambda x: self.load_label.set_visibility(False),
-                clearable=True
+                clearable=True,
             ).classes("flex-grow")
 
             with ui.column().classes("flex-grow"):
-                self.load_btn = ui.button(
-                    "Load Config"
-                ).classes("flex-grow w-full")
+                self.load_btn = ui.button("Load Config").classes("flex-grow w-full")
 
-                self.load_label = ui.label(
-                    "Config Loaded"
-                ).classes("flex-grow w-full")
+                self.load_label = ui.label("Config Loaded").classes("flex-grow w-full")
 
                 self.load_label.set_visibility(False)
 
-        self.timer = ui.timer(
-            5.0,
-            self.refresh_configs
-        )
+        self.timer = ui.timer(5.0, self.refresh_configs)

@@ -34,15 +34,29 @@ class WrapperTab:
         self.wrapper_items = []
 
         with ui.row().classes("w-full"):
-            ui.checkbox("Only active wrappers", on_change=lambda e: self.set_filter_active(e.value)).classes(
-                "flex-grow")
-            ui.input("Search wrappers", on_change=lambda e: self.apply_filters(e.value)).classes("flex-grow")
-            self.parent_filter = ui.select(options=[], label="Filter wrapper type", multiple=True, clearable=True,
-                                           on_change=lambda e: self.apply_filters()).classes("flex-grow")
-            self.module_filter = ui.select(options=[], label="Filter module", multiple=True, clearable=True,
-                                           on_change=lambda e: self.apply_filters()).classes("flex-grow")
+            ui.checkbox(
+                "Only active wrappers",
+                on_change=lambda e: self.set_filter_active(e.value),
+            ).classes("flex-grow")
+            ui.input(
+                "Search wrappers", on_change=lambda e: self.apply_filters(e.value)
+            ).classes("flex-grow")
+            self.parent_filter = ui.select(
+                options=[],
+                label="Filter wrapper type",
+                multiple=True,
+                clearable=True,
+                on_change=lambda e: self.apply_filters(),
+            ).classes("flex-grow")
+            self.module_filter = ui.select(
+                options=[],
+                label="Filter module",
+                multiple=True,
+                clearable=True,
+                on_change=lambda e: self.apply_filters(),
+            ).classes("flex-grow")
 
-        with Column().classes('w-full') as self.wrapper_container:
+        with Column().classes("w-full") as self.wrapper_container:
             for wrapper_name, wrapper_cls in self.wrappers.items():
                 self.add_wrapper(wrapper_name, wrapper_cls)
         self.parent_filter.set_options(self.get_available_parents())
@@ -66,32 +80,26 @@ class WrapperTab:
             "cls": wrapper_cls,
             "module": wrapper_cls.__module__,
             "parents": [
-                cls.__name__
-                for cls in wrapper_cls.__mro__[1:]
-                if cls is not object
+                cls.__name__ for cls in wrapper_cls.__mro__[1:] if cls is not object
             ],
             "active": False,
             "params": [],
             "element": None,
         }
 
-        with Draggable(width_class="w-full", on_drag_finished=self.drag_finished) as card:
+        with Draggable(
+            width_class="w-full", on_drag_finished=self.drag_finished
+        ) as card:
             item["element"] = card
             with ui.expansion(text=wrapper_name).classes("w-full"):
                 cb = ui.checkbox(
                     "Enable " + wrapper_name,
                     value=False,
-                    on_change=lambda e, i=item: self.set_active(i, e.value)
+                    on_change=lambda e, i=item: self.set_active(i, e.value),
                 )
                 item["checkbox"] = cb
-                params = list(
-                    inspect.signature(wrapper_cls).parameters.values()
-                )
-                item["params"] = build_ui_params(
-                    params,
-                    4,
-                    make_wrapper_ui
-                )
+                params = list(inspect.signature(wrapper_cls).parameters.values())
+                item["params"] = build_ui_params(params, 4, make_wrapper_ui)
 
         self.wrapper_items.append(item)
 
@@ -107,15 +115,9 @@ class WrapperTab:
         self.update_ui_order()
 
     def sort_wrappers(self):
-        active = [
-            x for x in self.wrapper_items
-            if x["active"]
-        ]
+        active = [x for x in self.wrapper_items if x["active"]]
 
-        inactive = [
-            x for x in self.wrapper_items
-            if not x["active"]
-        ]
+        inactive = [x for x in self.wrapper_items if not x["active"]]
 
         self.wrapper_items = active + inactive
 
@@ -128,15 +130,10 @@ class WrapperTab:
         item = self.wrapper_items.pop(e[0])
         self.wrapper_items.insert(e[1], item)
 
-        ui.notify(
-            f"{item['name']} moved"
-        )
+        ui.notify(f"{item['name']} moved")
 
     def available_modules(self):
-        return sorted({
-            item["module"]
-            for item in self.wrapper_items
-        })
+        return sorted({item["module"] for item in self.wrapper_items})
 
     def get_available_parents(self):
         parents = set()
@@ -154,25 +151,15 @@ class WrapperTab:
         if text is not None:
             self.search = text.lower()
 
-        parents = (
-            self.parent_filter.value
-            if hasattr(self, "parent_filter")
-            else None
-        )
+        parents = self.parent_filter.value if hasattr(self, "parent_filter") else None
 
-        modules = (
-            self.module_filter.value
-            if hasattr(self, "module_filter")
-            else None
-        )
+        modules = self.module_filter.value if hasattr(self, "module_filter") else None
 
         for item in self.wrapper_items:
             visible = True
 
             if self.search:
-                visible &= (
-                        self.search in item["name"].lower()
-                )
+                visible &= self.search in item["name"].lower()
 
             if self.only_active:
                 visible &= item["active"]
@@ -190,8 +177,12 @@ class WrapperTab:
 class Draggable(ui.card):
     dragged_background = "bg-blue-950"
 
-    def __init__(self, enable_dragging: bool = False, on_drag_finished: Callable | None = None,
-                 width_class="w-fit-content") -> None:
+    def __init__(
+        self,
+        enable_dragging: bool = False,
+        on_drag_finished: Callable | None = None,
+        width_class="w-fit-content",
+    ) -> None:
         super().__init__()
         self.drag_enabled = enable_dragging
         self.width_class = width_class
@@ -199,8 +190,11 @@ class Draggable(ui.card):
         self.old_index = None
         self.new_index = None
 
-        with self.props("draggable").classes(f"cursor-pointer").classes(self.width_class).style(
-                "box-shadow: none;"
+        with (
+            self.props("draggable")
+            .classes("cursor-pointer")
+            .classes(self.width_class)
+            .style("box-shadow: none;")
         ):
             self.build()
 

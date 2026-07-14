@@ -16,10 +16,18 @@ class Controller:
         self._start_thread(self.training.train, (config,))
 
     def is_alive_and_training(self):
-        return self.thread is not None and self.thread.is_alive() and self.training.running.is_set()
+        return (
+            self.thread is not None
+            and self.thread.is_alive()
+            and self.training.running.is_set()
+        )
 
     def is_alive_and_eval(self):
-        return self.thread is not None and self.thread.is_alive() and self.eval.running.is_set()
+        return (
+            self.thread is not None
+            and self.thread.is_alive()
+            and self.eval.running.is_set()
+        )
 
     def stop_training(self):
         self._stop_thread(self.training)
@@ -46,11 +54,7 @@ class Controller:
     def _start_thread(self, target, args):  # for now allow only one of the modes to run
         if self.thread is not None and self.thread.is_alive():
             raise Exception("A thread is already running")
-        self.thread = threading.Thread(
-            target=target,
-            args=args,
-            daemon=True
-        )
+        self.thread = threading.Thread(target=target, args=args, daemon=True)
         self.thread.start()
 
     def _stop_thread(self, target):

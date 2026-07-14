@@ -8,7 +8,11 @@ import cv2
 import gymnasium as gym
 import yaml
 from nicegui import ui
-from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, unwrap_vec_normalize
+from stable_baselines3.common.vec_env import (
+    DummyVecEnv,
+    SubprocVecEnv,
+    unwrap_vec_normalize,
+)
 
 from util.inspection_helper import resolve_name
 
@@ -26,6 +30,7 @@ def get_project_root():
 @cache
 def load_overrides():
     return yaml.safe_load((get_project_root() / "configs/overrides.yaml").read_text())
+
 
 def get_vec_env_class(cls):
     match cls:
@@ -123,7 +128,7 @@ def build_ui_params(params: list, elem_per_row: int, action):
 
     for i in range(0, len(params), elem_per_row):
         with ui.row().classes("w-full"):
-            for param in params[i:i + elem_per_row]:
+            for param in params[i : i + elem_per_row]:
                 temp.append(action(param=param))
 
     return temp
@@ -143,5 +148,5 @@ def copy_vecnorm(model, target_env):
 
 
 def frame_to_data_url(frame):
-    _, imencode_image = cv2.imencode('.jpg', frame)
+    _, imencode_image = cv2.imencode(".jpg", frame)
     return imencode_image.tobytes()

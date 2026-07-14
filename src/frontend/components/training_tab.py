@@ -14,7 +14,9 @@ from util.teestream import StreamType
 
 
 class TrainingTab:
-    def __init__(self, controller: Controller, log_queue: queue.Queue, config_path: Path):
+    def __init__(
+        self, controller: Controller, log_queue: queue.Queue, config_path: Path
+    ):
         self.config_loader = None
         self.controller = controller
         self.config_path = config_path
@@ -52,11 +54,13 @@ class TrainingTab:
 
     def reset_plot(self, num_envs):
         self.figure = {
-            'data': [],
+            "data": [],
         }
 
         for env_idx in range(num_envs):
-            self.figure['data'].append({'name': f'Env {env_idx}', 'type': 'scatter', 'x': [], 'y': []})
+            self.figure["data"].append(
+                {"name": f"Env {env_idx}", "type": "scatter", "x": [], "y": []}
+            )
 
         self.graph.update_figure(self.figure)
 
@@ -67,9 +71,9 @@ class TrainingTab:
             x = episode["timesteps"]
             y = episode["reward"]
 
-            self.figure['data'][env]['x'].append(x)
-            self.figure['data'][env]['y'].append(y)
-            self.graph.run_plot_method('extendTraces', {'x': [[x]], 'y': [[y]]}, [env])
+            self.figure["data"][env]["x"].append(x)
+            self.figure["data"][env]["y"].append(y)
+            self.graph.run_plot_method("extendTraces", {"x": [[x]], "y": [[y]]}, [env])
 
     def stop_training(self):
         self.controller.stop_training()
@@ -92,12 +96,12 @@ class TrainingTab:
             lambda: self.load_config(self.config_loader.config.value)
         )
 
-        with ui.tabs().classes('w-full justify-center') as tabs:
+        with ui.tabs().classes("w-full justify-center") as tabs:
             env_tab_btn = ui.tab("Environment Parameters")
             wrapper_tab_btn = ui.tab("Wrapper Parameters")
             model_tab_btn = ui.tab("Model Parameters")
 
-        with ui.tab_panels(tabs, value=env_tab_btn).classes('w-full flex-grow'):
+        with ui.tab_panels(tabs, value=env_tab_btn).classes("w-full flex-grow"):
             with ui.tab_panel(env_tab_btn):
                 self.env_tab.build()
 
@@ -107,34 +111,17 @@ class TrainingTab:
             with ui.tab_panel(model_tab_btn):
                 self.model_tab.build()
 
-        self.train_btn = ui.button(
-            "Train",
-            on_click=self.train
-        ).classes('w-full')
+        self.train_btn = ui.button("Train", on_click=self.train).classes("w-full")
 
-        self.stop_btn = ui.button(
-            "Stop",
-            on_click=self.stop_training
-        ).classes('w-full')
+        self.stop_btn = ui.button("Stop", on_click=self.stop_training).classes("w-full")
 
         self.stop_btn.set_visibility(False)
 
-        with ui.expansion(
-                "Training Output",
-                value=True
-        ).classes('w-full'):
-            with ui.row().classes('w-full'):
-                self.console = (
-                    ui.log()
-                    .classes("flex-1")
-                    .style("height: 400px")
-                )
+        with ui.expansion("Training Output", value=True).classes("w-full"):
+            with ui.row().classes("w-full"):
+                self.console = ui.log().classes("flex-1").style("height: 400px")
 
-                self.graph = (
-                    ui.plotly({})
-                    .classes("flex-1")
-                    .style("height: 400px")
-                )
+                self.graph = ui.plotly({}).classes("flex-1").style("height: 400px")
 
         ui.timer(0.1, self.consume_log)
 
@@ -143,7 +130,7 @@ class TrainingTab:
             msg = self.log_queue.get()
             match msg.stream_type:  # for now this suffices for the console
                 case StreamType.STDERR:
-                    self.console.push(msg.message, classes='text-red')
+                    self.console.push(msg.message, classes="text-red")
                 case StreamType.STDOUT:
                     self.console.push(msg.message)
 

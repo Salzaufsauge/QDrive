@@ -1,14 +1,13 @@
 import copy
 import threading
 
-import wandb
 from stable_baselines3.common.callbacks import CallbackList
 from wandb.integration.sb3 import WandbCallback
 
-from backend.callbacks import MilestoneCallback
-from backend.callbacks import StreamingCallback
+import wandb
+from backend.callbacks import MilestoneCallback, StreamingCallback
 from backend.config.config import ExperimentConfig
-from backend.env.env_manager import build_env, EnvMode
+from backend.env.env_manager import EnvMode, build_env
 from backend.state.train_state import TrainState, log
 from util.inspection_helper import load_algorithms
 from util.utils import get_project_root
@@ -30,7 +29,11 @@ class Train:
         log("INFO", "Starting training")
         log("INFO", f"Training config: {config.config}")
 
-        run_name: str = config.model_path.removeprefix("models/").replace(".zip", "").replace("model-", "")
+        run_name: str = (
+            config.model_path.removeprefix("models/")
+            .replace(".zip", "")
+            .replace("model-", "")
+        )
 
         env = None
         eval_env = None
@@ -45,9 +48,16 @@ class Train:
                 model = model_class.load(env=env, path=config.abs_model_path)
                 vecnorm = model.get_vec_normalize_env()
                 if vecnorm is not None:
-                    vecnorm.load(str(config.abs_model_path).replace(".zip", ".pkl"), venv=vecnorm)
+                    vecnorm.load(
+                        str(config.abs_model_path).replace(".zip", ".pkl"), venv=vecnorm
+                    )
             else:
-                model = model_class(**(model_param | dict(env=env, tensorboard_log=get_project_root() / "logs")))
+                model = model_class(
+                    **(
+                        model_param
+                        | dict(env=env, tensorboard_log=get_project_root() / "logs")
+                    )
+                )
 
             self.run = wandb.init(
                 project="QDrive",
@@ -58,11 +68,23 @@ class Train:
                 monitor_gym=True,
             )
 
-            streaming_callback = StreamingCallback(self, self.state, eval_env, eval_freq=max(
-                config.callback_params["eval_freq"] // config.env_params.get("n_envs"), 1),
-                                                   n_eval_episodes=config.callback_params["n_eval_episodes"],
-                                                   deterministic=config.callback_params["deterministic"])
-            milestone_callback = MilestoneCallback(self, eval_env, config.milestones) if config.milestones else None
+            streaming_callback = StreamingCallback(
+                self,
+                self.state,
+                eval_env,
+                eval_freq=max(
+                    config.callback_params["eval_freq"]
+                    // config.env_params.get("n_envs"),
+                    1,
+                ),
+                n_eval_episodes=config.callback_params["n_eval_episodes"],
+                deterministic=config.callback_params["deterministic"],
+            )
+            milestone_callback = (
+                MilestoneCallback(self, eval_env, config.milestones)
+                if config.milestones
+                else None
+            )
             wandb_callback = WandbCallback(
                 gradient_save_freq=1000,
                 verbose=2,
@@ -72,17 +94,25 @@ class Train:
                 callbacks.append(milestone_callback)
             callback = CallbackList(callbacks)
 
-            model.learn(total_timesteps=config.config.get("total_timesteps"), tb_log_name=self.run.id,
-                        callback=callback)
+            model.learn(
+                total_timesteps=config.config.get("total_timesteps"),
+                tb_log_name=self.run.id,
+                callback=callback,
+            )
 
             log("INFO", "Training finished")
 
             artifact = wandb.Artifact(f"run-{self.run.id}-config", type="config")
             artifact.add_file(
-                get_project_root() / config.model_path.replace("models", "experiments").replace(
-                    ".zip", ".yaml"))
+                get_project_root()
+                / config.model_path.replace("models", "experiments").replace(
+                    ".zip", ".yaml"
+                )
+            )
             self.run.log_artifact(artifact)
-            self.run.log_model(config.abs_model_path, )
+            self.run.log_model(
+                config.abs_model_path,
+            )
             self.run.finish(0)
         except Exception as e:
             if self.run is not None:

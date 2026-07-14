@@ -12,6 +12,7 @@ class LogMessage:
         self.stream_type = stream_type
         self.message = message
 
+
 class TeeStream:
     def __init__(self, orig, stream_type: StreamType, log_queue: queue.Queue):
         self.orig = orig

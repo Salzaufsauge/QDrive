@@ -14,6 +14,7 @@ def load_config(config_path: Path):
 
     return ExperimentConfig(yaml.safe_load(path.read_text()), config_path=config_path)
 
+
 def save_model(config: ExperimentConfig, model):
     model_path = config.abs_model_path
     vecnorm = model.get_vec_normalize_env()

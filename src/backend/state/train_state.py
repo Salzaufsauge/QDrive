@@ -8,7 +8,10 @@ def log(level: str, message: str):
     if level == "INFO":
         print(f"{datetime.datetime.now().strftime('%H:%M:%S')} - {level} - {message}")
     if level == "ERROR":
-        print(f"{datetime.datetime.now().strftime('%H:%M:%S')} - {level} - {message}", file=sys.stderr)
+        print(
+            f"{datetime.datetime.now().strftime('%H:%M:%S')} - {level} - {message}",
+            file=sys.stderr,
+        )
 
 
 class TrainState:

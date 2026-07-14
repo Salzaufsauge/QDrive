@@ -1,1 +1,1 @@
-from frontend.editor import Editor
+from frontend.editor import Editor  # noqa: F401

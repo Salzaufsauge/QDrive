@@ -9,20 +9,13 @@ from util.utils import build_ui_params, get_envs
 
 def make_env_ui(param: inspect.Parameter):
     if param.name == "env_id":
-        return ui.select(
-            options=get_envs(),
-            value="CarRacing-v3",
-            label=param.name
-        )
+        return ui.select(options=get_envs(), value="CarRacing-v3", label=param.name)
 
     if param.name == "vec_env_cls":
         return ui.select(
-            options=[
-                "DummyVecEnv",
-                "SubprocVecEnv"
-            ],
+            options=["DummyVecEnv", "SubprocVecEnv"],
             value="DummyVecEnv",
-            label=param.name
+            label=param.name,
         )
 
     if param.name == "wrapper_class":
@@ -38,19 +31,9 @@ class EnvTab:
         self.env_params = []
 
     def build(self):
-        params = list(
-            inspect.signature(
-                make_vec_env
-            ).parameters.values()
-        )
+        params = list(inspect.signature(make_vec_env).parameters.values())
 
-        self.env_params.extend(
-            build_ui_params(
-                params,
-                4,
-                make_env_ui
-            )
-        )
+        self.env_params.extend(build_ui_params(params, 4, make_env_ui))
 
     def get_env_params(self):
         return self.env_params

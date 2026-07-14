@@ -18,15 +18,17 @@ class Evaluate:
         env = build_env(config, EnvMode.EVAL)
 
         model = self.algorithms.get(config.algorithm).load(
-            config.abs_model_path, env=env)
+            config.abs_model_path, env=env
+        )
         vecnorm = model.get_vec_normalize_env()
         if vecnorm is not None:
-            vecnorm.load(str(config.abs_model_path).replace(".zip", ".pkl"), venv=vecnorm)
+            vecnorm.load(
+                str(config.abs_model_path).replace(".zip", ".pkl"), venv=vecnorm
+            )
         obs = env.reset()
 
         try:
             while self.running.is_set():
-
                 action, _states = model.predict(obs, deterministic=True)
                 obs, rewards, done, info = env.step(action)
                 frame = env.render(mode=mode)

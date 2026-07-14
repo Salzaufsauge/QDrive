@@ -23,11 +23,14 @@ import util.utils
 
 @cache
 def load_discovery():
-    return yaml.safe_load((util.utils.get_project_root() / "configs/discovery.yaml").read_text())
+    return yaml.safe_load(
+        (util.utils.get_project_root() / "configs/discovery.yaml").read_text()
+    )
+
 
 def iter_modules(package):
     for _, modname, _ in pkgutil.walk_packages(
-            package.__path__, package.__name__ + "."
+        package.__path__, package.__name__ + "."
     ):
         yield modname
 
@@ -51,39 +54,48 @@ def add_table(table_name, table_data):
     for row in table_data:
         row["_id"] = str(uuid.uuid4())
 
-    with ui.column().classes('flex-grow'):
-        ui.label(table_name).classes('text-lg font-bold')
+    with ui.column().classes("flex-grow"):
+        ui.label(table_name).classes("text-lg font-bold")
         grid = ui.aggrid(
             {
-                'columnDefs': [
-                    {"headerName": "_id", "field": "_id", 'hide': True},
-                    {"name": "key", "label": "key", "field": "key", 'editable': True},
-                    {"name": "value", "label": "value", "field": "value", 'editable': True},
+                "columnDefs": [
+                    {"headerName": "_id", "field": "_id", "hide": True},
+                    {"name": "key", "label": "key", "field": "key", "editable": True},
+                    {
+                        "name": "value",
+                        "label": "value",
+                        "field": "value",
+                        "editable": True,
+                    },
                 ],
-                'rowData': table_data,
-                'rowSelection': 'multiple',
-                'stopEditingWhenCellsLoseFocus': True,
+                "rowData": table_data,
+                "rowSelection": "multiple",
+                "stopEditingWhenCellsLoseFocus": True,
             },
             auto_size_columns=True,
-        ).classes('flex-grow')
-        with ui.row().classes('flex-grow'):
-            add_btn = ui.button(f'Add Row').classes('flex-grow')
-            rm_btn = ui.button(f"Remove selected Rows").classes('flex-grow')
+        ).classes("flex-grow")
+        with ui.row().classes("flex-grow"):
+            add_btn = ui.button("Add Row").classes("flex-grow")
+            rm_btn = ui.button("Remove selected Rows").classes("flex-grow")
 
     def add_row():
         new_id = str(uuid.uuid4())
-        grid.options['rowData'].append({'_id': new_id, 'key': None, 'value': None})
+        grid.options["rowData"].append({"_id": new_id, "key": None, "value": None})
 
     def handle_cell_value_change(e):
-        new_row = e.args['data']
-        grid.options['rowData'][:] = [row | new_row if row['_id'] ==
-                                                       new_row['_id'] else row for row in grid.options['rowData']]
+        new_row = e.args["data"]
+        grid.options["rowData"][:] = [
+            row | new_row if row["_id"] == new_row["_id"] else row
+            for row in grid.options["rowData"]
+        ]
 
     async def delete_selected():
-        selected_id = [row['_id'] for row in await grid.get_selected_rows()]
-        grid.options['rowData'][:] = [row for row in grid.options['rowData'] if row['_id'] not in selected_id]
+        selected_id = [row["_id"] for row in await grid.get_selected_rows()]
+        grid.options["rowData"][:] = [
+            row for row in grid.options["rowData"] if row["_id"] not in selected_id
+        ]
 
-    grid.on('cellValueChanged', handle_cell_value_change)
+    grid.on("cellValueChanged", handle_cell_value_change)
     add_btn.on_click(add_row)
     rm_btn.on_click(delete_selected)
 
@@ -104,25 +116,18 @@ def make_ui_for_param(param, value=None, visible=True):
         ann = unwrap_optional(ann)
 
         if any(
-                typing.get_origin(a) is collections.abc.Callable
-                or a is typing.Callable
-                for a in args
+            typing.get_origin(a) is collections.abc.Callable or a is typing.Callable
+            for a in args
         ):
-            elem = ui.input(
-                label=param.name,
-                value=str(val) if val is not None else ''
-            )
+            elem = ui.input(label=param.name, value=str(val) if val is not None else "")
 
             elem.set_visibility(visible)
-            return elem.classes('flex-grow')
+            return elem.classes("flex-grow")
 
     origin = typing.get_origin(ann)
 
     if ann is str:
-        elem = ui.input(
-            label=param.name,
-            value=val
-        )
+        elem = ui.input(label=param.name, value=val)
 
     elif ann is int:
         elem = ui.number(
@@ -131,36 +136,21 @@ def make_ui_for_param(param, value=None, visible=True):
         )
 
     elif ann is float:
-        elem = ui.number(
-            label=param.name,
-            value=val
-        )
+        elem = ui.number(label=param.name, value=val)
 
     elif ann is bool:
-        elem = ui.checkbox(
-            text=param.name,
-            value=val
-        )
+        elem = ui.checkbox(text=param.name, value=val)
 
     elif origin is dict:
-        rows = [
-            {"key": k, "value": v}
-            for k, v in (val or {}).items()
-        ]
+        rows = [{"key": k, "value": v} for k, v in (val or {}).items()]
 
         elem = add_table(param.name, rows)
 
     elif origin is typing.Callable:
-        elem = ui.textarea(
-            label=param.name,
-            value=str(val) if val is not None else ''
-        )
+        elem = ui.textarea(label=param.name, value=str(val) if val is not None else "")
 
     elif isinstance(val, bool):
-        elem = ui.checkbox(
-            text=param.name,
-            value=val
-        )
+        elem = ui.checkbox(text=param.name, value=val)
 
     elif isinstance(val, numbers.Number):
         elem = ui.number(
@@ -169,33 +159,33 @@ def make_ui_for_param(param, value=None, visible=True):
         )
 
     elif param.name.endswith("keys"):
-        rows = [
-            {"key": k, "value": v}
-            for k, v in (val or {}).items()
-        ]
+        rows = [{"key": k, "value": v} for k, v in (val or {}).items()]
 
         elem = add_table(param.name, rows)
 
     else:
         elem = ui.input(
             label=f"{param.name} (unknown type)",
-            value=str(val) if val is not None else ''
+            value=str(val) if val is not None else "",
         )
 
     elem.set_visibility(visible)
-    return elem.classes('flex-grow')
+    return elem.classes("flex-grow")
 
 
 @cache
 def load_algorithms():
     discovery = load_discovery()["algorithms"]
 
-    return discover_classes(discovery, lambda _, obj:
-    issubclass(obj, BaseAlgorithm)
-    and obj is not BaseAlgorithm
-    and obj is not OffPolicyAlgorithm
-    and obj is not OnPolicyAlgorithm
-                            )
+    return discover_classes(
+        discovery,
+        lambda _, obj: (
+            issubclass(obj, BaseAlgorithm)
+            and obj is not BaseAlgorithm
+            and obj is not OffPolicyAlgorithm
+            and obj is not OnPolicyAlgorithm
+        ),
+    )
 
 
 @cache
@@ -232,14 +222,21 @@ def unwrap_optional(annotation):
 def load_env_wrappers():
     discovery = load_discovery()["env_wrappers"]
 
-    wrappers = discover_classes(discovery, lambda _, obj:
-    issubclass(obj, gymnasium.Wrapper)
-    and obj is not gymnasium.Wrapper or
-    issubclass(obj, VecEnvWrapper)
-    and obj is not VecEnvWrapper
-                                )
+    wrappers = discover_classes(
+        discovery,
+        lambda _, obj: (
+            issubclass(obj, gymnasium.Wrapper)
+            and obj is not gymnasium.Wrapper
+            or issubclass(obj, VecEnvWrapper)
+            and obj is not VecEnvWrapper
+        ),
+    )
 
-    return dict(sorted(wrappers.items(), key=lambda x: 0 if issubclass(x[1], VecEnvWrapper) else 1))
+    return dict(
+        sorted(
+            wrappers.items(), key=lambda x: 0 if issubclass(x[1], VecEnvWrapper) else 1
+        )
+    )
 
 
 def resolve_name(name):
