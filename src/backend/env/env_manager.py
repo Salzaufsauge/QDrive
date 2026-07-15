@@ -4,12 +4,11 @@ from functools import partial
 
 import gymnasium
 from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import VecEnv, DummyVecEnv, VecEnvWrapper
+from stable_baselines3.common.vec_env import DummyVecEnv, VecEnv, VecEnvWrapper
 
 from backend.config.config import ExperimentConfig
-from backend.state.train_state import log
 from util.inspection_helper import load_env_wrappers
-from util.utils import get_vec_env_class, load_overrides
+from util.utils import get_vec_env_class, load_overrides, log
 
 
 class EnvMode(Enum):

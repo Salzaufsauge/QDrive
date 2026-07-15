@@ -1,5 +1,5 @@
-import ast
 import copy
+import datetime
 import sys
 from functools import cache
 from pathlib import Path
@@ -13,8 +13,6 @@ from stable_baselines3.common.vec_env import (
     SubprocVecEnv,
     unwrap_vec_normalize,
 )
-
-from util.inspection_helper import resolve_name
 
 
 @cache
@@ -30,6 +28,11 @@ def get_project_root():
 @cache
 def load_overrides():
     return yaml.safe_load((get_project_root() / "configs/overrides.yaml").read_text())
+
+
+@cache
+def load_discovery():
+    return yaml.safe_load((get_project_root() / "configs/discovery.yaml").read_text())
 
 
 def get_vec_env_class(cls):
@@ -52,29 +55,6 @@ def replace_empty_strings(obj):
         return obj
 
 
-ALLOWED_NODES = {
-    ast.Expression,
-    ast.Lambda,
-    ast.arguments,
-    ast.arg,
-    ast.BinOp,
-    ast.Add,
-    ast.Sub,
-    ast.Mult,
-    ast.Div,
-    ast.Pow,
-    ast.Name,
-    ast.Load,
-    ast.Constant,
-}
-
-
-def validate_ast(node):
-    for child in ast.walk(node):
-        if type(child) not in ALLOWED_NODES:
-            raise ValueError(f"Unsupported expression: {type(child).__name__}")
-
-
 def get_config_path(model_path):
     model_path = Path(model_path)
     parts = list(model_path.parts)
@@ -87,40 +67,6 @@ def get_config_path(model_path):
     conf_path = conf_path.with_suffix(".yaml")
 
     return conf_path
-
-
-def parse_val(s: str):
-    try:
-        return ast.literal_eval(s)
-    except (ValueError, SyntaxError):
-        return s
-
-
-# useful for stuff like lr where a lambda can be passed
-def parse_lambda(s):
-    if not isinstance(s, str):
-        return s
-
-    tree = ast.parse(s, mode="eval")
-
-    if isinstance(tree.body, ast.Lambda):
-        validate_ast(tree)
-        return eval(compile(tree, "<lambda>", "eval"), {"__builtins__": {}})
-
-    try:
-        if isinstance(tree.body, (ast.Name, ast.Attribute)):
-            return resolve_name(s)
-    except Exception as e:
-        print(e, file=sys.stderr)
-        print(f"Using {s} as is")
-
-    return s
-
-
-def parse_params(data):
-    if isinstance(data, dict):
-        return {k: parse_params(v) for k, v in data.items()}
-    return parse_lambda(data)
 
 
 def build_ui_params(params: list, elem_per_row: int, action):
@@ -150,3 +96,13 @@ def copy_vecnorm(model, target_env):
 def frame_to_data_url(frame):
     _, imencode_image = cv2.imencode(".jpg", frame)
     return imencode_image.tobytes()
+
+
+def log(level: str, message: str):
+    if level == "INFO":
+        print(f"{datetime.datetime.now().strftime('%H:%M:%S')} - {level} - {message}")
+    if level == "ERROR":
+        print(
+            f"{datetime.datetime.now().strftime('%H:%M:%S')} - {level} - {message}",
+            file=sys.stderr,
+        )

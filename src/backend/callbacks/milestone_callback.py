@@ -1,10 +1,9 @@
+import wandb
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.vec_env import VecVideoRecorder
 
-import wandb
-from backend.state.train_state import log
-from util.utils import copy_vecnorm, get_project_root
+from util.utils import copy_vecnorm, get_project_root, log
 
 
 class MilestoneCallback(BaseCallback):

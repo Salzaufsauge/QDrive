@@ -2,7 +2,8 @@ from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 
-from util.utils import get_project_root, parse_params
+from util.inspection_helper import parse_params
+from util.utils import get_project_root
 
 
 @dataclass(frozen=False)
