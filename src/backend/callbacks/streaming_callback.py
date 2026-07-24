@@ -2,8 +2,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.evaluation import evaluate_policy
 
 from backend.config.storage import save_config, save_model
-from backend.state.train_state import log
-from util.utils import copy_vecnorm
+from util.utils import copy_vecnorm, log
 
 
 class StreamingCallback(BaseCallback):

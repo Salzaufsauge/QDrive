@@ -1,16 +1,16 @@
 import copy
 import threading
 
+import wandb
 from stable_baselines3.common.callbacks import CallbackList
 from wandb.integration.sb3 import WandbCallback
 
-import wandb
 from backend.callbacks import MilestoneCallback, StreamingCallback
 from backend.config.config import ExperimentConfig
 from backend.env.env_manager import EnvMode, build_env
-from backend.state.train_state import TrainState, log
+from backend.state.train_state import TrainState
 from util.inspection_helper import load_algorithms
-from util.utils import get_project_root
+from util.utils import get_project_root, log
 
 
 class Train:

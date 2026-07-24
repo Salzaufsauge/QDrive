@@ -1,8 +1,10 @@
+import ast
 import collections.abc
 import importlib
 import inspect
 import numbers
 import pkgutil
+import sys
 import types
 import typing
 import uuid
@@ -10,7 +12,6 @@ from functools import cache
 from typing import get_origin
 
 import gymnasium
-import yaml
 from nicegui import ui
 from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.off_policy_algorithm import OffPolicyAlgorithm
@@ -18,14 +19,23 @@ from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
 from stable_baselines3.common.policies import BasePolicy
 from stable_baselines3.common.vec_env import VecEnvWrapper
 
-import util.utils
+from util.utils import load_discovery
 
-
-@cache
-def load_discovery():
-    return yaml.safe_load(
-        (util.utils.get_project_root() / "configs/discovery.yaml").read_text()
-    )
+ALLOWED_NODES = {
+    ast.Expression,
+    ast.Lambda,
+    ast.arguments,
+    ast.arg,
+    ast.BinOp,
+    ast.Add,
+    ast.Sub,
+    ast.Mult,
+    ast.Div,
+    ast.Pow,
+    ast.Name,
+    ast.Load,
+    ast.Constant,
+}
 
 
 def iter_modules(package):
@@ -256,3 +266,43 @@ def resolve_name(name):
         obj = getattr(obj, part)
 
     return obj
+
+
+def parse_val(s: str):
+    try:
+        return ast.literal_eval(s)
+    except (ValueError, SyntaxError):
+        return s
+
+
+def validate_ast(node):
+    for child in ast.walk(node):
+        if type(child) not in ALLOWED_NODES:
+            raise ValueError(f"Unsupported expression: {type(child).__name__}")
+
+
+# useful for stuff like lr where a lambda can be passed
+def parse_lambda(s):
+    if not isinstance(s, str):
+        return s
+
+    tree = ast.parse(s, mode="eval")
+
+    if isinstance(tree.body, ast.Lambda):
+        validate_ast(tree)
+        return eval(compile(tree, "<lambda>", "eval"), {"__builtins__": {}})
+
+    try:
+        if isinstance(tree.body, (ast.Name, ast.Attribute)):
+            return resolve_name(s)
+    except Exception as e:
+        print(e, file=sys.stderr)
+        print(f"Using {s} as is")
+
+    return s
+
+
+def parse_params(data):
+    if isinstance(data, dict):
+        return {k: parse_params(v) for k, v in data.items()}
+    return parse_lambda(data)

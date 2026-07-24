@@ -6,8 +6,13 @@ from stable_baselines3.common.env_util import make_vec_env
 
 from backend.config.config import ExperimentConfig
 from backend.config.storage import load_config
-from util.inspection_helper import load_algorithms, load_env_wrappers, unwrap_optional
-from util.utils import get_config_path, parse_val, replace_empty_strings
+from util.inspection_helper import (
+    load_algorithms,
+    load_env_wrappers,
+    parse_val,
+    unwrap_optional,
+)
+from util.utils import get_config_path, replace_empty_strings
 
 
 def build_config(params, sig_params):
