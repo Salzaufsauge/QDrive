@@ -22,6 +22,7 @@ class EvalTab:
         self.controller = controller
         self.config = None
         self.config_path = config_path
+        self.eval_timer = None
 
         self.eval_btn = None
         self.stop_btn = None
@@ -36,9 +37,13 @@ class EvalTab:
             self.stop_eval()
             return
         self.controller.start_eval(self.config)
+        self.eval_timer = ui.timer(0.01, self.output.force_reload)
 
     def stop_eval(self):
         self.controller.stop_eval()
+
+        if self.eval_timer is not None:
+            self.eval_timer.cancel()
 
         self.stop_btn.set_visibility(False)
         self.eval_btn.set_visibility(True)
@@ -92,4 +97,3 @@ class EvalTab:
             self.output = ui.interactive_image("video/frame").classes(
                 "w-[640px] h-[480px] object-contain"
             )
-            ui.timer(0.01, self.output.force_reload)

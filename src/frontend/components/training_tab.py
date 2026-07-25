@@ -123,7 +123,7 @@ class TrainingTab:
 
                 self.graph = ui.plotly({}).classes("flex-1").style("height: 400px")
 
-        ui.timer(0.1, self.consume_log)
+        ui.timer(10, self.consume_log)
 
     def consume_log(self):
         while not self.log_queue.empty():

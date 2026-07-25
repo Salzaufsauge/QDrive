@@ -49,4 +49,5 @@ class Editor:
             host="0.0.0.0",
             reload=False,
             dark=True,
+            native=True,
         )
