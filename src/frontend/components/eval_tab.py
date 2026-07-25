@@ -49,6 +49,10 @@ class EvalTab:
         self.eval_btn.set_visibility(True)
 
     def load_config(self, config_path):
+        if config_path is None and self.config is not None:
+            self.config = None
+            ui.notify("Unloaded config")
+            return
         try:
             self.config = load_config(config_path)
 

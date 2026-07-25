@@ -82,6 +82,10 @@ class TrainingTab:
         self.train_btn.set_visibility(True)
 
     def load_config(self, config_path):
+        if config_path is None and self.config is not None:
+            self.config = None
+            ui.notify("Unloaded config")
+            return
         try:
             self.config = load_config(config_path)
             self.config_loader.load_label.set_visibility(True)
