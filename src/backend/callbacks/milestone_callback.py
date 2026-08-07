@@ -1,0 +1,85 @@
+import wandb
+from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.evaluation import evaluate_policy
+from stable_baselines3.common.vec_env import VecVideoRecorder
+
+from util.utils import copy_vecnorm, get_project_root, log
+
+
+class MilestoneCallback(BaseCallback):
+    def __init__(self, trainer, eval_env, milestones: list, verbose=0):
+        super().__init__(verbose)
+        self.trainer = trainer
+        self.eval_env = eval_env
+        self.milestones = sorted([int(milestone) for milestone in milestones])
+        self.current_milestone = self.milestones.pop(0) if self.milestones else None
+        self.train_start_timesteps = trainer.config.config.get("current_timesteps", 0)
+
+    def _on_step(self) -> bool:
+        if not self.milestones and self.current_milestone is None:
+            return True
+        if self.train_start_timesteps + self.num_timesteps >= self.current_milestone:
+            try:
+                log("INFO", f"Starting milestone {self.current_milestone}")
+                model_base_path = self.trainer.config.model_path.replace(".zip", "")
+                video_base_path = model_base_path.replace("models", "experiments")
+                copy_vecnorm(self.model, self.eval_env)
+                mean_reward, std_reward = evaluate_policy(
+                    self.model, self.eval_env, n_eval_episodes=10
+                )
+                video_path = (
+                    get_project_root() / video_base_path / str(self.current_milestone)
+                )
+                model_path = (
+                    get_project_root()
+                    / model_base_path
+                    / str(self.current_milestone)
+                    / f"model-{mean_reward}.zip"
+                )
+                vecnorm_path = str(model_path).replace(".zip", ".pkl")
+                vecnorm = self.model.get_vec_normalize_env()
+                self.model.save(model_path)
+                rec_env = VecVideoRecorder(
+                    self.eval_env,
+                    str(video_path),
+                    record_video_trigger=lambda x: x == 0,
+                    video_length=2000,
+                    name_prefix=str(self.current_milestone) + "-",
+                )
+                obs = rec_env.reset()
+                for _ in range(2000):
+                    action, _states = self.model.predict(obs, deterministic=True)
+                    obs, rewards, dones, info = rec_env.step(action)
+                    rec_env.render()
+                rec_env.close()
+
+                if vecnorm is not None:
+                    vecnorm.save(vecnorm_path)
+                    self.trainer.run.log_model(vecnorm_path)
+                self.trainer.run.log_model(model_path)
+                self.trainer.run.log(
+                    {
+                        "video": wandb.Video(
+                            rec_env.video_path,
+                            caption=f"{self.trainer.config.algorithm} at step {self.current_milestone}",
+                            format="mp4",
+                        )
+                    },
+                    step=self.current_milestone,
+                )
+
+                log(
+                    "INFO",
+                    f"Milestone {self.current_milestone} done | reward={mean_reward:.2f}",
+                )
+            except Exception as e:
+                log("ERROR", f"Milestone evaluation failed: {e}")
+                raise
+            finally:
+                try:
+                    self.current_milestone = self.milestones.pop(0)
+                    self.trainer.config.milestones = self.milestones
+                except IndexError:
+                    self.current_milestone = None
+
+        return True

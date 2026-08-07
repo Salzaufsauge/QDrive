@@ -17,13 +17,17 @@ TOML_PATH = Path(__file__).parent / "pyproject.toml"
 
 CUDA_INDEX_VERSION = (13, 2)
 
+
 def set_torch_index(index_name: str) -> None:
     content = TOML_PATH.read_text(encoding="utf-8", newline="")
-    updated, count = re.subn(r'(index\s*=\s*")pytorch-\w+(")', rf"\g<1>{index_name}\g<2>", content)
+    updated, count = re.subn(
+        r'(index\s*=\s*")pytorch-\w+(")', rf"\g<1>{index_name}\g<2>", content
+    )
     if count == 0:
         sys.exit(f"ERROR: no PyTorch index entry found in {TOML_PATH}")
     TOML_PATH.write_text(updated, encoding="utf-8", newline="")
     print(f"PyTorch index set to: {index_name} ({count} entries updated)")
+
 
 def set_rocm_index_explicit(explicit: bool) -> None:
     # ROCm builds require triton-rocm as a transitive dependency, which only
@@ -35,7 +39,7 @@ def set_rocm_index_explicit(explicit: bool) -> None:
 
     def rewrite_block(m: re.Match) -> str:
         # \r?\n keeps this working on both LF and CRLF (Windows) files.
-        block = re.sub(r'\r?\nexplicit\s*=\s*\S+', '', m.group(0)).rstrip('\r\n')
+        block = re.sub(r"\r?\nexplicit\s*=\s*\S+", "", m.group(0)).rstrip("\r\n")
         if explicit:
             block += nl + "explicit = true"
         return block + nl
@@ -48,25 +52,30 @@ def set_rocm_index_explicit(explicit: bool) -> None:
     )
     TOML_PATH.write_text(updated, encoding="utf-8", newline="")
 
+
 def amd_on_linux() -> bool:
     try:
-        out = subprocess.run(["lspci"], capture_output=True, text=True, check=False).stdout
+        out = subprocess.run(
+            ["lspci"], capture_output=True, text=True, check=False
+        ).stdout
     except FileNotFoundError:
         return False
 
-
-
     return bool(re.search(r"AMD|Radeon|Instinct", out, re.IGNORECASE))
+
 
 def nvidia_cuda_version() -> tuple[int, int] | None:
     try:
-        out = subprocess.run(["nvidia-smi"], capture_output=True, text=True, check=False).stdout
+        out = subprocess.run(
+            ["nvidia-smi"], capture_output=True, text=True, check=False
+        ).stdout
     except FileNotFoundError:
         return None
     match = re.search(r"CUDA Version:\s*(\d+)\.(\d+)", out)
     if not match:
         return None
     return int(match.group(1)), int(match.group(2))
+
 
 def setup() -> None:
     if shutil.which("uv") is None:
@@ -110,6 +119,7 @@ def setup() -> None:
         set_rocm_index_explicit(True)
 
     subprocess.run(["uv", "sync"], check=True)
+
 
 if __name__ == "__main__":
     setup()
