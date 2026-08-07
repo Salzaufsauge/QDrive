@@ -1,10 +1,10 @@
 import copy
 import threading
 
-import wandb
 from stable_baselines3.common.callbacks import CallbackList
 from wandb.integration.sb3 import WandbCallback
 
+import wandb
 from backend.callbacks import MilestoneCallback, StreamingCallback
 from backend.config.config import ExperimentConfig
 from backend.env.env_manager import EnvMode, build_env
@@ -61,6 +61,7 @@ class Train:
 
             self.run = wandb.init(
                 project="QDrive",
+                entity="QDrive",
                 config=config.config,
                 name=run_name,
                 dir=get_project_root(),
