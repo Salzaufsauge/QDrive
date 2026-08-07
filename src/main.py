@@ -1,5 +1,5 @@
 import argparse
-import queue
+import asyncio
 import signal
 import sys
 from pathlib import Path
@@ -7,7 +7,8 @@ from pathlib import Path
 from backend.config.storage import load_config
 from backend.controller import Controller
 from frontend import Editor
-from util.teestream import TeeStream, StreamType
+from util.LoggingBroker import LoggingBroker
+from util.teestream import StreamType, TeeStream
 from util.utils import get_project_root
 
 
@@ -28,15 +29,17 @@ def main(args):
         elif args.eval:
             Controller().start_eval(configuration, mode=args.mode)
     else:
-        log_queue = queue.Queue()
+        logging_broker = LoggingBroker()
 
-        sys.stdout = TeeStream(sys.stdout, StreamType.STDOUT, log_queue)
-        sys.stderr = TeeStream(sys.stderr, StreamType.STDERR, log_queue)
+        sys.stdout = TeeStream(sys.stdout, StreamType.STDOUT, logging_broker)
+        sys.stderr = TeeStream(sys.stderr, StreamType.STDERR, logging_broker)
 
         config_path = get_project_root() / "experiments"
         controller = Controller()
         signal.signal(signal.SIGINT, interrupt_handler(controller))
-        editor = Editor(controller, log_queue=log_queue, config_path=config_path)
+        editor = Editor(
+            controller, logging_broker=logging_broker, config_path=config_path
+        )
         editor.launch()
 
 

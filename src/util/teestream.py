@@ -1,5 +1,6 @@
-import queue
 from enum import Enum
+
+from util.LoggingBroker import LoggingBroker
 
 
 class StreamType(Enum):
@@ -14,10 +15,10 @@ class LogMessage:
 
 
 class TeeStream:
-    def __init__(self, orig, stream_type: StreamType, log_queue: queue.Queue):
+    def __init__(self, orig, stream_type: StreamType, logging_dist: LoggingBroker):
         self.orig = orig
         self.stream_type = stream_type
-        self.log_queue = log_queue
+        self.logging_dist = logging_dist
 
     def write(self, message):
         self.orig.write(message)
@@ -25,7 +26,7 @@ class TeeStream:
 
         stripped = message.rstrip()
         if stripped:
-            self.log_queue.put(LogMessage(self.stream_type, stripped))
+            self.logging_dist.publish(LogMessage(self.stream_type, stripped))
 
         return len(message)
 

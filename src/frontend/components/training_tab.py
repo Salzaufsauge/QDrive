@@ -1,3 +1,4 @@
+import asyncio
 import queue
 from pathlib import Path
 
@@ -14,9 +15,7 @@ from util.teestream import StreamType
 
 
 class TrainingTab:
-    def __init__(
-        self, controller: Controller, log_queue: queue.Queue, config_path: Path
-    ):
+    def __init__(self, controller: Controller, config_path: Path, logging_broker):
         self.config_loader = None
         self.controller = controller
         self.config_path = config_path
@@ -29,12 +28,11 @@ class TrainingTab:
         self.train_btn = None
         self.stop_btn = None
 
-        self.log_queue = log_queue
-
-        self.console = None
         self.graph = None
         self.figure = None
         self.training_timer = None
+
+        self.logging_broker = logging_broker
 
         self.model_container = None
 
@@ -123,20 +121,25 @@ class TrainingTab:
 
         with ui.expansion("Training Output", value=True).classes("w-full"):
             with ui.row().classes("w-full"):
-                self.console = ui.log().classes("flex-1").style("height: 400px")
+                with ui.keep_alive():
+                    console = ui.log().classes("flex-1").style("height: 400px")
+                    self.graph = ui.plotly({}).classes("flex-1").style("height: 400px")
 
-                self.graph = ui.plotly({}).classes("flex-1").style("height: 400px")
+        subscription = self.logging_broker.subscribe()
 
-        ui.timer(10, self.consume_log)
+        async def consume_log():
+            try:
+                while True:
+                    msg = await subscription.client_queue.get()
+                    match msg.stream_type:
+                        case StreamType.STDERR:
+                            console.push(msg.message, classes="text-red")
+                        case StreamType.STDOUT:
+                            console.push(msg.message)
+            finally:
+                self.logging_broker.unsubscribe(subscription)
 
-    def consume_log(self):
-        while not self.log_queue.empty():
-            msg = self.log_queue.get()
-            match msg.stream_type:  # for now this suffices for the console
-                case StreamType.STDERR:
-                    self.console.push(msg.message, classes="text-red")
-                case StreamType.STDOUT:
-                    self.console.push(msg.message)
+        asyncio.create_task(consume_log())
 
     def train(self):
         try:
