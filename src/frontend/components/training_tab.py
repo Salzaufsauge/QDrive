@@ -73,8 +73,8 @@ class TrainingTab:
             self.figure["data"][env]["y"].append(y)
             self.graph.run_plot_method("extendTraces", {"x": [[x]], "y": [[y]]}, [env])
 
-    def stop_training(self):
-        self.controller.stop_training()
+    async def stop_training(self):
+        await self.controller.stop_training()
 
         self.stop_btn.set_visibility(False)
         self.train_btn.set_visibility(True)

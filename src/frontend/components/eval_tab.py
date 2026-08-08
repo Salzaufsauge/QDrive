@@ -39,8 +39,8 @@ class EvalTab:
         self.controller.start_eval(self.config)
         self.eval_timer = ui.timer(0.01, self.output.force_reload)
 
-    def stop_eval(self):
-        self.controller.stop_eval()
+    async def stop_eval(self):
+        await self.controller.stop_eval()
 
         if self.eval_timer is not None:
             self.eval_timer.cancel()

@@ -1,4 +1,5 @@
 import argparse
+import asyncio
 import signal
 import sys
 from pathlib import Path
@@ -12,9 +13,15 @@ from util.utils import get_project_root
 
 
 def interrupt_handler(controller):
-    def handler(signum, frame):
-        controller.stop_all()
+    async def shutdown():
+        await controller.stop_all()
         sys.exit(0)
+
+    def handler(signum, frame):
+        try:
+            asyncio.create_task(controller.stop_all())
+        except RuntimeError:
+            print("No running loop")
 
     return handler
 

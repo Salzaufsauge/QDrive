@@ -30,21 +30,21 @@ class Controller:
             and self.eval.running.is_set()
         )
 
-    def stop_training(self):
-        asyncio.create_task(self._stop_thread(self.training))
+    async def stop_training(self):
+        await self._stop_thread(self.training)
 
-    def stop_all(self):
+    async def stop_all(self):
         try:
-            self._stop_thread(self.training)
-            self._stop_thread(self.eval)
+            await self._stop_thread(self.training)
+            await self._stop_thread(self.eval)
         except Exception as e:
             print(e, file=sys.stderr)
 
     def start_eval(self, config: ExperimentConfig, mode: str = "rgb_array"):
         self._start_thread(self.eval.evaluate, (config, mode))
 
-    def stop_eval(self):
-        asyncio.create_task(self._stop_thread(self.eval))
+    async def stop_eval(self):
+        await self._stop_thread(self.eval)
 
     def get_training_state(self):
         return self.training.get_state()
