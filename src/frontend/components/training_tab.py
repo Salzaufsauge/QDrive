@@ -124,9 +124,6 @@ class TrainingTab:
             self.graph = ui.plotly({}).classes("flex-1").style("height: 400px")
 
         subscription = self.logging_broker.subscribe()
-        ui.context.client.on_delete(
-            partial(self.logging_broker.unsubscribe, subscription)
-        )
 
         async def consume_log():
             try:
@@ -140,7 +137,13 @@ class TrainingTab:
             finally:
                 self.logging_broker.unsubscribe(subscription)
 
-        asyncio.create_task(consume_log())
+        consume_log_task = asyncio.create_task(consume_log())
+
+        def handle_on_delete():
+            self.logging_broker.unsubscribe(subscription)
+            consume_log_task.cancel()
+
+        ui.context.client.on_delete(handle_on_delete)
 
     def train(self, train_btn, stop_btn):
         self.setup_config(
