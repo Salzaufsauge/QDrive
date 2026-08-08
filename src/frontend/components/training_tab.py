@@ -2,7 +2,7 @@ import asyncio
 from functools import partial
 from pathlib import Path
 
-from nicegui import app, ui
+from nicegui import ui
 
 from backend.config.builder import ConfigBuilder
 from backend.config.storage import load_config
@@ -24,9 +24,6 @@ class TrainingTab:
         self.env_tab = EnvTab()
         self.wrapper_tab = WrapperTab()
         self.model_tab = ModelTab()
-
-        self.train_btn = None
-        self.stop_btn = None
 
         self.graph = None
         self.figure = None
@@ -73,11 +70,11 @@ class TrainingTab:
             self.figure["data"][env]["y"].append(y)
             self.graph.run_plot_method("extendTraces", {"x": [[x]], "y": [[y]]}, [env])
 
-    async def stop_training(self):
+    async def stop_training(self, train_btn, stop_btn):
         await self.controller.stop_training()
 
-        self.stop_btn.set_visibility(False)
-        self.train_btn.set_visibility(True)
+        stop_btn.set_visibility(False)
+        train_btn.set_visibility(True)
 
     def load_config(self, config_path):
         if config_path is None and self.config is not None:
@@ -113,20 +110,23 @@ class TrainingTab:
             with ui.tab_panel(model_tab_btn):
                 self.model_tab.build()
 
-        self.train_btn = ui.button("Train", on_click=self.train).classes("w-full")
+        train_btn = ui.button("Train").classes("w-full")
+        stop_btn = ui.button("Stop").classes("w-full").set_visibility(False)
+        train_btn.on_click(partial(self.train, train_btn, stop_btn))
+        stop_btn.on_click(partial(self.stop_training, train_btn, stop_btn))
 
-        self.stop_btn = ui.button("Stop", on_click=self.stop_training).classes("w-full")
-
-        self.stop_btn.set_visibility(False)
-
-        with ui.expansion("Training Output", value=True).classes("w-full"):
-            with ui.row().classes("w-full"):
-                with ui.keep_alive():
-                    console = ui.log().classes("flex-1").style("height: 400px")
-                    self.graph = ui.plotly({}).classes("flex-1").style("height: 400px")
+        with (
+            ui.expansion("Training Output", value=True).classes("w-full"),
+            ui.row().classes("w-full"),
+            ui.keep_alive(),
+        ):
+            console = ui.log().classes("flex-1").style("height: 400px")
+            self.graph = ui.plotly({}).classes("flex-1").style("height: 400px")
 
         subscription = self.logging_broker.subscribe()
-        app.on_delete(partial(self.logging_broker.unsubscribe, subscription))
+        ui.context.client.on_delete(
+            partial(self.logging_broker.unsubscribe, subscription)
+        )
 
         async def consume_log():
             try:
@@ -142,22 +142,18 @@ class TrainingTab:
 
         asyncio.create_task(consume_log())
 
-    def train(self):
-        try:
-            self.setup_config(
-                *[self.config_loader.config],
-                *self.env_tab.env_params,
-                *self.wrapper_tab.wrapper_params,
-                *self.model_tab.model_params,
-            )
-
-        except Exception as e:
-            raise e
+    def train(self, train_btn, stop_btn):
+        self.setup_config(
+            *[self.config_loader.config],
+            *self.env_tab.env_params,
+            *self.wrapper_tab.wrapper_params,
+            *self.model_tab.model_params,
+        )
 
         self.reset_plot(self.config.env_params["n_envs"])
 
         self.controller.start_training(self.config)
         self.training_timer = ui.timer(10, self.get_training_state)
 
-        self.train_btn.set_visibility(False)
-        self.stop_btn.set_visibility(True)
+        train_btn.set_visibility(False)
+        stop_btn.set_visibility(True)

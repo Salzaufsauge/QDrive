@@ -31,13 +31,11 @@ class Editor:
                 eval_tab = ui.tab("Eval")
 
             with ui.tab_panels(tabs, value=train_tab).classes("w-full flex-grow"):
-                with ui.tab_panel(train_tab):
-                    with ui.card().classes("w-full h-full"):
-                        self.training_tab.build()
+                with ui.tab_panel(train_tab), ui.card().classes("w-full h-full"):
+                    self.training_tab.build()
 
-                with ui.tab_panel(eval_tab):
-                    with ui.card().classes("w-full h-full"):
-                        self.eval_tab.build()
+                with ui.tab_panel(eval_tab), ui.card().classes("w-full h-full"):
+                    self.eval_tab.build()
 
     def launch(self):
         @ui.page("/")

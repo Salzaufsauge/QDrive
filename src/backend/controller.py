@@ -54,7 +54,7 @@ class Controller:
 
     def _start_thread(self, target, args):  # for now allow only one of the modes to run
         if self.thread is not None and self.thread.is_alive():
-            raise Exception("A thread is already running")
+            raise RuntimeError("A thread is already running")
         self.thread = threading.Thread(target=target, args=args, daemon=True)
         self.thread.start()
 
