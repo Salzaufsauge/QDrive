@@ -1,3 +1,4 @@
+import asyncio
 import sys
 import threading
 
@@ -30,7 +31,7 @@ class Controller:
         )
 
     def stop_training(self):
-        self._stop_thread(self.training)
+        asyncio.create_task(self._stop_thread(self.training))
 
     def stop_all(self):
         try:
@@ -43,7 +44,7 @@ class Controller:
         self._start_thread(self.eval.evaluate, (config, mode))
 
     def stop_eval(self):
-        self._stop_thread(self.eval)
+        asyncio.create_task(self._stop_thread(self.eval))
 
     def get_training_state(self):
         return self.training.get_state()
@@ -57,9 +58,16 @@ class Controller:
         self.thread = threading.Thread(target=target, args=args, daemon=True)
         self.thread.start()
 
-    def _stop_thread(self, target):
-        if self.thread is not None and self.thread.is_alive():
+    async def _stop_thread(self, target):
+        thread = self.thread
+
+        if thread is None:
+            return
+
+        if thread.is_alive():
             if target.running.is_set():
                 target.stop()
-            self.thread.join()
-            self.thread = None
+            await asyncio.to_thread(thread.join)
+
+            if thread == self.thread:
+                self.thread = None

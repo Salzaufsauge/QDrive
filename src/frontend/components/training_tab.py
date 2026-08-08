@@ -1,8 +1,8 @@
 import asyncio
-import queue
+from functools import partial
 from pathlib import Path
 
-from nicegui import ui
+from nicegui import app, ui
 
 from backend.config.builder import ConfigBuilder
 from backend.config.storage import load_config
@@ -126,6 +126,7 @@ class TrainingTab:
                     self.graph = ui.plotly({}).classes("flex-1").style("height: 400px")
 
         subscription = self.logging_broker.subscribe()
+        app.on_delete(partial(self.logging_broker.unsubscribe, subscription))
 
         async def consume_log():
             try:

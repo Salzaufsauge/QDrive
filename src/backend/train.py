@@ -141,4 +141,6 @@ class Train:
         self.running.clear()
 
     def get_state(self):
+        if self.state is None:
+            return None
         return self.state.reward_fig()
