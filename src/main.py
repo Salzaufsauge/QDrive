@@ -13,15 +13,12 @@ from util.utils import get_project_root
 
 
 def interrupt_handler(controller):
-    async def shutdown():
-        await controller.stop_all()
-        sys.exit(0)
-
     def handler(signum, frame):
         try:
             asyncio.create_task(controller.stop_all())
         except RuntimeError:
             print("No running loop")
+            asyncio.run(controller.stop_all())
 
     return handler
 
