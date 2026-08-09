@@ -11,6 +11,7 @@ from backend.env.env_manager import EnvMode, build_env
 from backend.state.train_state import TrainState
 from util.inspection_helper import load_algorithms
 from util.utils import get_project_root, log
+from backend.callbacks.video import record_pending_best_model
 
 
 class Train:
@@ -20,6 +21,7 @@ class Train:
         self.config = None
         self.state = None
         self.run = None
+        self.pending_best_model = None
 
     def train(self, config: ExperimentConfig):
         self.running.set()
@@ -102,6 +104,8 @@ class Train:
             )
 
             log("INFO", "Training finished")
+
+            record_pending_best_model(self, eval_env)
 
             artifact = wandb.Artifact(f"run-{self.run.id}-config", type="config")
             artifact.add_file(

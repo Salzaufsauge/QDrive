@@ -53,6 +53,13 @@ class StreamingCallback(BaseCallback):
                 self.last_timesteps = self.num_timesteps
                 save_model(self.trainer.config, self.model)
                 save_config(self.trainer.config)
+
+                self.trainer.pending_best_model = {
+                    "model_path": self.trainer.config.abs_model_path,
+                    "reward": mean_reward,
+                    "timesteps": self.trainer.config.current_timesteps,
+                }
+
         for env_idx, info in enumerate(infos):
             if "episode" in info:
                 episode = {
