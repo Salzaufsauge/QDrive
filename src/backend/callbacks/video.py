@@ -17,10 +17,12 @@ def record_and_upload_video(trainer, model, eval_env, video_path, caption, step,
         rec_env.render()
 
     trainer.run.log(
-        {"video": wandb.Video(rec_env.video_path,
-                caption=caption,
-                format="mp4")},
-                step=step,
+        {
+            "video": wandb.Video(rec_env.video_path,
+                                 caption=caption,
+                                 format="mp4"),
+            "video_step": step,
+        }
     )
 
 

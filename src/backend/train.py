@@ -71,6 +71,9 @@ class Train:
                 monitor_gym=True,
             )
 
+            self.run.define_metric("video_step")
+            self.run.define_metric("video", step_metric="video_step")
+
             streaming_callback = StreamingCallback(
                 self,
                 self.state,
