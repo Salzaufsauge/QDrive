@@ -28,19 +28,19 @@ class EvalTab:
         self.stop_btn = None
         self.output = None
 
-    def start_eval(self):
+    async def start_eval(self):
         self.eval_btn.set_visibility(False)
         self.stop_btn.set_visibility(True)
 
         if self.config is None or self.config.model_path is None:
             ui.notify("No model loaded", type="negative")
-            self.stop_eval()
+            await self.stop_eval()
             return
         self.controller.start_eval(self.config)
         self.eval_timer = ui.timer(0.01, self.output.force_reload)
 
-    def stop_eval(self):
-        self.controller.stop_eval()
+    async def stop_eval(self):
+        await self.controller.stop_eval()
 
         if self.eval_timer is not None:
             self.eval_timer.cancel()

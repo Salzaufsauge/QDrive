@@ -1,4 +1,5 @@
-import queue
+import asyncio
+from functools import partial
 from pathlib import Path
 
 from nicegui import ui
@@ -14,9 +15,7 @@ from util.teestream import StreamType
 
 
 class TrainingTab:
-    def __init__(
-        self, controller: Controller, log_queue: queue.Queue, config_path: Path
-    ):
+    def __init__(self, controller: Controller, config_path: Path, logging_broker):
         self.config_loader = None
         self.controller = controller
         self.config_path = config_path
@@ -26,15 +25,11 @@ class TrainingTab:
         self.wrapper_tab = WrapperTab()
         self.model_tab = ModelTab()
 
-        self.train_btn = None
-        self.stop_btn = None
-
-        self.log_queue = log_queue
-
-        self.console = None
         self.graph = None
         self.figure = None
         self.training_timer = None
+
+        self.logging_broker = logging_broker
 
         self.model_container = None
 
@@ -75,11 +70,11 @@ class TrainingTab:
             self.figure["data"][env]["y"].append(y)
             self.graph.run_plot_method("extendTraces", {"x": [[x]], "y": [[y]]}, [env])
 
-    def stop_training(self):
-        self.controller.stop_training()
+    async def stop_training(self, train_btn, stop_btn):
+        await self.controller.stop_training()
 
-        self.stop_btn.set_visibility(False)
-        self.train_btn.set_visibility(True)
+        stop_btn.set_visibility(False)
+        train_btn.set_visibility(True)
 
     def load_config(self, config_path):
         if config_path is None and self.config is not None:
@@ -115,45 +110,53 @@ class TrainingTab:
             with ui.tab_panel(model_tab_btn):
                 self.model_tab.build()
 
-        self.train_btn = ui.button("Train", on_click=self.train).classes("w-full")
+        train_btn = ui.button("Train").classes("w-full")
+        stop_btn = ui.button("Stop").classes("w-full").set_visibility(False)
+        train_btn.on_click(partial(self.train, train_btn, stop_btn))
+        stop_btn.on_click(partial(self.stop_training, train_btn, stop_btn))
 
-        self.stop_btn = ui.button("Stop", on_click=self.stop_training).classes("w-full")
+        with (
+            ui.expansion("Training Output", value=True).classes("w-full"),
+            ui.row().classes("w-full"),
+            ui.keep_alive(),
+        ):
+            console = ui.log().classes("flex-1").style("height: 400px")
+            self.graph = ui.plotly({}).classes("flex-1").style("height: 400px")
 
-        self.stop_btn.set_visibility(False)
+        subscription = self.logging_broker.subscribe()
 
-        with ui.expansion("Training Output", value=True).classes("w-full"):
-            with ui.row().classes("w-full"):
-                self.console = ui.log().classes("flex-1").style("height: 400px")
+        async def consume_log():
+            try:
+                while True:
+                    msg = await subscription.client_queue.get()
+                    match msg.stream_type:
+                        case StreamType.STDERR:
+                            console.push(msg.message, classes="text-red")
+                        case StreamType.STDOUT:
+                            console.push(msg.message)
+            finally:
+                self.logging_broker.unsubscribe(subscription)
 
-                self.graph = ui.plotly({}).classes("flex-1").style("height: 400px")
+        consume_log_task = asyncio.create_task(consume_log())
 
-        ui.timer(10, self.consume_log)
+        def handle_on_delete():
+            self.logging_broker.unsubscribe(subscription)
+            consume_log_task.cancel()
 
-    def consume_log(self):
-        while not self.log_queue.empty():
-            msg = self.log_queue.get()
-            match msg.stream_type:  # for now this suffices for the console
-                case StreamType.STDERR:
-                    self.console.push(msg.message, classes="text-red")
-                case StreamType.STDOUT:
-                    self.console.push(msg.message)
+        ui.context.client.on_delete(handle_on_delete)
 
-    def train(self):
-        try:
-            self.setup_config(
-                *[self.config_loader.config],
-                *self.env_tab.env_params,
-                *self.wrapper_tab.wrapper_params,
-                *self.model_tab.model_params,
-            )
-
-        except Exception as e:
-            raise e
+    def train(self, train_btn, stop_btn):
+        self.setup_config(
+            *[self.config_loader.config],
+            *self.env_tab.env_params,
+            *self.wrapper_tab.wrapper_params,
+            *self.model_tab.model_params,
+        )
 
         self.reset_plot(self.config.env_params["n_envs"])
 
         self.controller.start_training(self.config)
         self.training_timer = ui.timer(10, self.get_training_state)
 
-        self.train_btn.set_visibility(False)
-        self.stop_btn.set_visibility(True)
+        train_btn.set_visibility(False)
+        stop_btn.set_visibility(True)

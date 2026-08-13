@@ -1,3 +1,4 @@
+import asyncio
 import sys
 import threading
 
@@ -29,21 +30,21 @@ class Controller:
             and self.eval.running.is_set()
         )
 
-    def stop_training(self):
-        self._stop_thread(self.training)
+    async def stop_training(self):
+        await self._stop_thread(self.training)
 
-    def stop_all(self):
+    async def stop_all(self):
         try:
-            self._stop_thread(self.training)
-            self._stop_thread(self.eval)
+            await self._stop_thread(self.training)
+            await self._stop_thread(self.eval)
         except Exception as e:
             print(e, file=sys.stderr)
 
     def start_eval(self, config: ExperimentConfig, mode: str = "rgb_array"):
         self._start_thread(self.eval.evaluate, (config, mode))
 
-    def stop_eval(self):
-        self._stop_thread(self.eval)
+    async def stop_eval(self):
+        await self._stop_thread(self.eval)
 
     def get_training_state(self):
         return self.training.get_state()
@@ -53,13 +54,20 @@ class Controller:
 
     def _start_thread(self, target, args):  # for now allow only one of the modes to run
         if self.thread is not None and self.thread.is_alive():
-            raise Exception("A thread is already running")
+            raise RuntimeError("A thread is already running")
         self.thread = threading.Thread(target=target, args=args, daemon=True)
         self.thread.start()
 
-    def _stop_thread(self, target):
-        if self.thread is not None and self.thread.is_alive():
+    async def _stop_thread(self, target):
+        thread = self.thread
+
+        if thread is None:
+            return
+
+        if thread.is_alive():
             if target.running.is_set():
                 target.stop()
-            self.thread.join()
-            self.thread = None
+            await asyncio.to_thread(thread.join)
+
+            if thread == self.thread:
+                self.thread = None
