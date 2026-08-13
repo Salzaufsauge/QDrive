@@ -50,9 +50,9 @@ class Train:
                 model = model_class.load(env=env, path=config.abs_model_path)
                 vecnorm = model.get_vec_normalize_env()
                 if vecnorm is not None:
-                    vecnorm.load(
-                        str(config.abs_model_path).replace(".zip", ".pkl"), venv=vecnorm
-                    )
+                    loaded = vecnorm.load(str(config.abs_model_path).replace(".zip", ".pkl"), venv=vecnorm)
+                    vecnorm.obs_rms = loaded.obs_rms
+                    vecnorm.ret_rms = loaded.ret_rms
             else:
                 model = model_class(
                     **(
@@ -118,9 +118,14 @@ class Train:
                 )
             )
             self.run.log_artifact(artifact)
-            self.run.log_model(
-                config.abs_model_path,
-            )
+
+            vecnorm = model.get_vec_normalize_env()
+            if vecnorm is not None:
+                vecnorm_path = str(config.abs_model_path).replace(".zip", ".pkl")
+                vecnorm.save(vecnorm_path)
+                self.run.log_model(vecnorm_path)
+
+            self.run.log_model(config.abs_model_path)
             self.run.finish(0)
         except Exception as e:
             if self.run is not None:
