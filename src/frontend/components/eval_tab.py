@@ -2,6 +2,7 @@ from functools import partial
 from pathlib import Path
 
 from nicegui import ui
+from yaml import YAMLError
 
 from backend.config.storage import load_config
 from backend.controller import Controller
@@ -19,7 +20,7 @@ class EvalTab:
         self.eval_btn = None
         self.stop_btn = None
 
-    async def start_eval(self, eval_timer: ui.Timer):
+    async def start_eval(self, eval_timer: ui.timer):
         self.eval_btn.set_visibility(False)
         self.stop_btn.set_visibility(True)
 
@@ -30,7 +31,7 @@ class EvalTab:
         self.controller.start_eval(self.config)
         eval_timer.activate()
 
-    async def stop_eval(self, eval_timer: ui.Timer):
+    async def stop_eval(self, eval_timer: ui.timer):
         await self.controller.stop_eval()
 
         eval_timer.deactivate()
@@ -43,6 +44,9 @@ class EvalTab:
             self.config = None
             ui.notify("Unloaded config")
             return
+        if config_path is None:
+            ui.notify("No config selected")
+            return
         try:
             self.config = load_config(config_path)
 
@@ -54,6 +58,10 @@ class EvalTab:
 
         except FileNotFoundError as e:
             ui.notify(str(e), type="negative")
+        except KeyError as e:
+            ui.notify(f"Missing key in config: {e}", type="negative")
+        except YAMLError as e:
+            ui.notify(f"Error parsing config: {e}", type="negative")
 
     def build(self):
 
@@ -79,7 +87,7 @@ class EvalTab:
                 "w-[640px] h-[480px] object-contain"
             )
 
-        eval_timer = ui.timer(0.003, output.force_reload, active=False)
+        eval_timer = ui.timer(0.017, output.force_reload, active=False)
 
         self.eval_btn.on_click(partial(self.start_eval, eval_timer))
         self.stop_btn.on_click(partial(self.stop_eval, eval_timer))
