@@ -1,18 +1,11 @@
-import base64
+from functools import partial
 from pathlib import Path
 
-from fastapi import Response
-from nicegui import app, run, ui
+from nicegui import ui
 
 from backend.config.storage import load_config
 from backend.controller import Controller
 from frontend.components.config_loader import ConfigLoader
-from util.utils import frame_to_data_url
-
-black_1px = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAA1JREFUGFdjYGBg+A8AAQQBAHAgZQsAAAAASUVORK5CYII="
-placeholder = Response(
-    content=base64.b64decode(black_1px.encode("ascii")), media_type="image/png"
-)
 
 
 class EvalTab:
@@ -22,28 +15,25 @@ class EvalTab:
         self.controller = controller
         self.config = None
         self.config_path = config_path
-        self.eval_timer = None
 
         self.eval_btn = None
         self.stop_btn = None
-        self.output = None
 
-    async def start_eval(self):
+    async def start_eval(self, eval_timer: ui.Timer):
         self.eval_btn.set_visibility(False)
         self.stop_btn.set_visibility(True)
 
         if self.config is None or self.config.model_path is None:
             ui.notify("No model loaded", type="negative")
-            await self.stop_eval()
+            await self.stop_eval(eval_timer)
             return
         self.controller.start_eval(self.config)
-        self.eval_timer = ui.timer(0.01, self.output.force_reload)
+        eval_timer.activate()
 
-    async def stop_eval(self):
+    async def stop_eval(self, eval_timer: ui.Timer):
         await self.controller.stop_eval()
 
-        if self.eval_timer is not None:
-            self.eval_timer.cancel()
+        eval_timer.deactivate()
 
         self.stop_btn.set_visibility(False)
         self.eval_btn.set_visibility(True)
@@ -62,7 +52,7 @@ class EvalTab:
                 raise FileNotFoundError(f"Model {model_path} not found")
             self.config_loader.load_label.set_visibility(True)
 
-        except Exception as e:
+        except FileNotFoundError as e:
             ui.notify(str(e), type="negative")
 
     def build(self):
@@ -79,25 +69,22 @@ class EvalTab:
         self.model_loader_label.set_visibility(False)
 
         with ui.row().classes("w-full"):
-            self.eval_btn = ui.button("Evaluate", on_click=self.start_eval).classes(
-                "flex-grow"
-            )
-
-            self.stop_btn = ui.button("Stop", on_click=self.stop_eval).classes(
-                "flex-grow"
-            )
+            self.eval_btn = ui.button("Evaluate").classes("flex-grow")
+            self.stop_btn = ui.button("Stop").classes("flex-grow")
 
             self.stop_btn.set_visibility(False)
 
-        @app.get("/video/frame")
-        async def get_frame() -> Response:
-            frame = self.controller.get_current_frame()
-            if frame is None:
-                return placeholder
-            jpeg = await run.cpu_bound(frame_to_data_url, frame)
-            return Response(jpeg, media_type="image/jpeg")
-
         with ui.row().classes("w-full justify-center"):
-            self.output = ui.interactive_image("video/frame").classes(
+            output = ui.interactive_image("video/frame").classes(
                 "w-[640px] h-[480px] object-contain"
             )
+
+        eval_timer = ui.timer(0.003, output.force_reload, active=False)
+
+        self.eval_btn.on_click(partial(self.start_eval, eval_timer))
+        self.stop_btn.on_click(partial(self.stop_eval, eval_timer))
+
+        def handle_on_delete():
+            eval_timer.cancel()
+
+        ui.context.client.on_delete(handle_on_delete)
