@@ -28,6 +28,10 @@ class TrainingTab:
         self.graph = None
         self.figure = None
         self.training_timer = None
+        self.train_btn = None
+        self.stop_btn = None
+
+        self.cur_run_id = None
 
         self.logging_broker = logging_broker
 
@@ -41,8 +45,18 @@ class TrainingTab:
             raise
 
     def get_training_state(self):
-        if not self.controller.is_alive_and_training():
-            self.training_timer.cancel()
+        alive, run_id, run_type, run_config = self.controller.get_run_snapshot()
+
+        self.train_btn.set_visibility(not alive)
+        self.stop_btn.set_visibility(alive)
+
+        if alive is None:
+            return
+
+        if alive and run_id != self.cur_run_id:
+            self.cur_run_id = run_id
+            self.reset_plot(run_config.env_params["n_envs"])
+
         new_data = self.controller.get_training_state()
         if new_data:
             self.extend_plot(new_data)
@@ -70,11 +84,9 @@ class TrainingTab:
             self.figure["data"][env]["y"].append(y)
             self.graph.run_plot_method("extendTraces", {"x": [[x]], "y": [[y]]}, [env])
 
-    async def stop_training(self, train_btn, stop_btn):
+    async def stop_training(self):
         await self.controller.stop_training()
-
-        stop_btn.set_visibility(False)
-        train_btn.set_visibility(True)
+        self.get_training_state()
 
     def load_config(self, config_path):
         if config_path is None and self.config is not None:
@@ -110,10 +122,12 @@ class TrainingTab:
             with ui.tab_panel(model_tab_btn):
                 self.model_tab.build()
 
-        train_btn = ui.button("Train").classes("w-full")
-        stop_btn = ui.button("Stop").classes("w-full").set_visibility(False)
-        train_btn.on_click(partial(self.train, train_btn, stop_btn))
-        stop_btn.on_click(partial(self.stop_training, train_btn, stop_btn))
+        self.train_btn = ui.button("Train", on_click=self.train).classes("w-full")
+        self.stop_btn = (
+            ui.button("Stop", on_click=self.stop_training)
+            .classes("w-full")
+            .set_visibility(False)
+        )
 
         with (
             ui.expansion("Training Output", value=True).classes("w-full"),
@@ -138,14 +152,16 @@ class TrainingTab:
                 self.logging_broker.unsubscribe(subscription)
 
         consume_log_task = asyncio.create_task(consume_log())
+        self.training_timer = ui.timer(0.5, self.get_training_state)
 
         def handle_on_delete():
             self.logging_broker.unsubscribe(subscription)
             consume_log_task.cancel()
+            self.training_timer.cancel()
 
         ui.context.client.on_delete(handle_on_delete)
 
-    def train(self, train_btn, stop_btn):
+    def train(self):
         self.setup_config(
             *[self.config_loader.config],
             *self.env_tab.env_params,
@@ -153,10 +169,5 @@ class TrainingTab:
             *self.model_tab.model_params,
         )
 
-        self.reset_plot(self.config.env_params["n_envs"])
-
         self.controller.start_training(self.config)
-        self.training_timer = ui.timer(10, self.get_training_state)
-
-        train_btn.set_visibility(False)
-        stop_btn.set_visibility(True)
+        self.get_training_state()

@@ -1,10 +1,16 @@
 import asyncio
 import sys
 import threading
+import uuid
 
 from backend.config.config import ExperimentConfig
 from backend.evaluate import Evaluate
 from backend.train import Train
+
+
+class RunType:
+    TRAIN = "train"
+    EVAL = "eval"
 
 
 class Controller:
@@ -12,22 +18,23 @@ class Controller:
         self.training = Train()
         self.eval = Evaluate()
         self.thread = None
+        self.run_id = None
+        self.run_type = None
+        self.config = None
 
     def start_training(self, config: ExperimentConfig):
+        self.run_type = RunType.TRAIN
+        self.config = config
         self._start_thread(self.training.train, (config,))
 
-    def is_alive_and_training(self):
+    def get_run_snapshot(self):
         return (
             self.thread is not None
             and self.thread.is_alive()
-            and self.training.running.is_set()
-        )
-
-    def is_alive_and_eval(self):
-        return (
-            self.thread is not None
-            and self.thread.is_alive()
-            and self.eval.running.is_set()
+            and self.training.running.is_set(),
+            self.run_id,
+            self.run_type,
+            self.config,
         )
 
     async def stop_training(self):
@@ -41,6 +48,8 @@ class Controller:
             print(e, file=sys.stderr)
 
     def start_eval(self, config: ExperimentConfig, mode: str = "rgb_array"):
+        self.run_type = RunType.EVAL
+        self.config = config
         self._start_thread(self.eval.evaluate, (config, mode))
 
     async def stop_eval(self):
@@ -57,6 +66,7 @@ class Controller:
             raise RuntimeError("A thread is already running")
         self.thread = threading.Thread(target=target, args=args, daemon=True)
         self.thread.start()
+        self.run_id = uuid.uuid4()
 
     async def _stop_thread(self, target):
         thread = self.thread
@@ -71,3 +81,6 @@ class Controller:
 
             if thread == self.thread:
                 self.thread = None
+                self.run_id = None  # shouldn't really matter as long as id is different
+                self.run_type = None
+                self.config = None
