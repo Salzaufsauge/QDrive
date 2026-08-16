@@ -65,6 +65,5 @@ class StreamingCallback(BaseCallback):
                     "INFO",
                     f"Episode finished after {episode['timesteps']} timesteps with reward {episode['reward']}.",
                 )
-                with self.state.lock:
-                    self.state.episodes.append(episode)
+                self.state.append_episode(episode)
         return self.trainer.running.is_set()

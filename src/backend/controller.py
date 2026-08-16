@@ -55,8 +55,8 @@ class Controller:
     async def stop_eval(self):
         await self._stop_thread(self.eval)
 
-    def get_training_state(self):
-        return self.training.get_state()
+    def get_training_state(self, sequence_after: int = 0):
+        return self.training.get_state(sequence_after)
 
     def get_current_frame(self):
         return self.eval.get_current_frame()

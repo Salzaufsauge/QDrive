@@ -32,6 +32,7 @@ class TrainingTab:
         self.stop_btn = None
 
         self.cur_run_id = None
+        self.last_sequence = 0
 
         self.logging_broker = logging_broker
 
@@ -55,11 +56,13 @@ class TrainingTab:
 
         if alive and run_id != self.cur_run_id:
             self.cur_run_id = run_id
+            self.last_sequence = 0
             self.reset_plot(run_config.env_params["n_envs"])
 
-        new_data = self.controller.get_training_state()
+        new_data = self.controller.get_training_state(self.last_sequence)
         if new_data:
             self.extend_plot(new_data)
+            self.last_sequence = new_data[-1]["sequence"]
 
     def reset_plot(self, num_envs):
         self.figure = {
