@@ -152,5 +152,7 @@ class Train:
             log("INFO", "Stopping training")
         self.running.clear()
 
-    def get_state(self):
-        return self.state.reward_fig()
+    def get_state(self, sequence_after: int = 0):
+        if self.state is None:
+            return []
+        return self.state.reward_fig(sequence_after)

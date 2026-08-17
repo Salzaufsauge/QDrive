@@ -2,6 +2,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.evaluation import evaluate_policy
 
 from backend.callbacks.video import record_and_upload_video, record_pending_best_model
+import wandb
 from util.utils import copy_vecnorm, get_project_root, log
 
 

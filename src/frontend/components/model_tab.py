@@ -78,19 +78,19 @@ class ModelTab:
             ui.number(label="total_timesteps", value=1000000).classes("w-full")
         )
 
-        with ui.expansion("Callback Parameters").classes("w-full"):
-            with ui.row().classes("w-full"):
-                self.model_params.append(
-                    ui.number(label="eval_freq", value=10000).classes("flex-grow")
-                )
-
-                self.model_params.append(
-                    ui.number(label="n_eval_episodes", value=10).classes("flex-grow")
-                )
-
-                self.model_params.append(
-                    ui.checkbox(text="deterministic", value=True).classes("flex-grow")
-                )
+        with (
+            ui.expansion("Callback Parameters").classes("w-full"),
+            ui.row().classes("w-full"),
+        ):
+            self.model_params.append(
+                ui.number(label="eval_freq", value=10000).classes("flex-grow")
+            )
+            self.model_params.append(
+                ui.number(label="n_eval_episodes", value=10).classes("flex-grow")
+            )
+            self.model_params.append(
+                ui.checkbox(text="deterministic", value=True).classes("flex-grow")
+            )
 
         self.model_params_base_len = len(self.model_params)
 

@@ -139,14 +139,11 @@ def make_ui_for_param(param, value=None, visible=True):
     if ann is str:
         elem = ui.input(label=param.name, value=val)
 
-    elif ann is int:
+    elif ann is int or ann is float:
         elem = ui.number(
             label=param.name,
             value=val,
         )
-
-    elif ann is float:
-        elem = ui.number(label=param.name, value=val)
 
     elif ann is bool:
         elem = ui.checkbox(text=param.name, value=val)

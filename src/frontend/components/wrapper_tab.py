@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import inspect
-from typing import Callable
+from collections.abc import Callable
 
 from nicegui import ui
 
@@ -254,7 +254,7 @@ class Draggable(ui.card):
         self.classes(remove=self.dragged_background)
         if not self.drag_enabled:
             return
-        global _dragged
+
         if not _dragged:
             return
 
@@ -286,7 +286,6 @@ class Column(ui.column):
     def get_draggable_children(self) -> list[Draggable]:
         children = []
         for i in self.default_slot.children:
-            if issubclass(i.__class__, Draggable):
-                if i.drag_enabled:  # type:ignore
-                    children.append(i)
+            if issubclass(i.__class__, Draggable) and i.drag_enabled:
+                children.append(i)
         return children
