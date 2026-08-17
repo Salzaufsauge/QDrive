@@ -7,7 +7,7 @@ from nicegui import app, run, ui
 from backend.controller import Controller
 from frontend.components.eval_tab import EvalTab
 from frontend.components.training_tab import TrainingTab
-from util.LoggingBroker import LoggingBroker
+from util.logging_broker import LoggingBroker
 from util.utils import frame_to_data_url
 
 black_1px = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAA1JREFUGFdjYGBg+A8AAQQBAHAgZQsAAAAASUVORK5CYII="
@@ -21,7 +21,7 @@ class Editor:
         self, controller: Controller, logging_broker: LoggingBroker, config_path: Path
     ):
         self.config_path = config_path
-        self.controller = controller 
+        self.controller = controller
         self.logging_broker = logging_broker
 
     def register_video_route(self) -> None:

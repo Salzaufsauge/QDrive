@@ -55,7 +55,7 @@ class Train:
                 model = model_class(
                     **(
                         model_param
-                        | dict(env=env, tensorboard_log=get_project_root() / "logs")
+                        | {"env": env, "tensorboard_log": get_project_root() / "logs"}
                     )
                 )
 

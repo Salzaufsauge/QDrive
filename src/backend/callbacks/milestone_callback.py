@@ -24,7 +24,7 @@ class MilestoneCallback(BaseCallback):
                 model_base_path = self.trainer.config.model_path.replace(".zip", "")
                 video_base_path = model_base_path.replace("models", "experiments")
                 copy_vecnorm(self.model, self.eval_env)
-                mean_reward, std_reward = evaluate_policy(
+                mean_reward, _std_reward = evaluate_policy(
                     self.model, self.eval_env, n_eval_episodes=10
                 )
                 video_path = (
@@ -49,7 +49,7 @@ class MilestoneCallback(BaseCallback):
                 obs = rec_env.reset()
                 for _ in range(2000):
                     action, _states = self.model.predict(obs, deterministic=True)
-                    obs, rewards, dones, info = rec_env.step(action)
+                    obs, _rewards, _dones, _info = rec_env.step(action)
                     rec_env.render()
                 rec_env.close()
 

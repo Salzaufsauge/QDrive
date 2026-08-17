@@ -17,7 +17,7 @@ from stable_baselines3.common.vec_env import (
 
 @cache
 def get_envs():
-    return sorted([env_id for env_id in gym.envs.registry.keys()])
+    return sorted([env_id for env_id in gym.envs.registry])
 
 
 @cache
@@ -100,9 +100,11 @@ def frame_to_data_url(frame):
 
 def log(level: str, message: str):
     if level == "INFO":
-        print(f"{datetime.datetime.now().strftime('%H:%M:%S')} - {level} - {message}")
+        print(
+            f"{datetime.datetime.now(tz=datetime.UTC).strftime('%H:%M:%S')} - {level} - {message}"
+        )
     if level == "ERROR":
         print(
-            f"{datetime.datetime.now().strftime('%H:%M:%S')} - {level} - {message}",
+            f"{datetime.datetime.now(tz=datetime.UTC).strftime('%H:%M:%S')} - {level} - {message}",
             file=sys.stderr,
         )
