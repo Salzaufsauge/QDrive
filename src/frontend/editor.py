@@ -12,13 +12,9 @@ class Editor:
     def __init__(
         self, controller: Controller, logging_broker: LoggingBroker, config_path: Path
     ):
-        self.training_tab = TrainingTab(
-            controller, logging_broker=logging_broker, config_path=config_path
-        )
-
-        self.eval_tab = EvalTab(controller, config_path=config_path)
-
         self.config_path = config_path
+        self.controller = controller
+        self.logging_broker = logging_broker
 
     def build(self):
         ui.query("body").classes("m-0 p-0")
@@ -32,10 +28,12 @@ class Editor:
 
             with ui.tab_panels(tabs, value=train_tab).classes("w-full flex-grow"):
                 with ui.tab_panel(train_tab), ui.card().classes("w-full h-full"):
-                    self.training_tab.build()
+                    TrainingTab(
+                        self.controller, self.config_path, self.logging_broker
+                    ).build()
 
                 with ui.tab_panel(eval_tab), ui.card().classes("w-full h-full"):
-                    self.eval_tab.build()
+                    EvalTab(self.controller, self.config_path).build()
 
     def launch(self):
         @ui.page("/")
