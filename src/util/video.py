@@ -19,6 +19,7 @@ def record_and_upload_video(
         action, _states = model.predict(obs, deterministic=True)
         obs, _rewards, _dones, _info = rec_env.step(action)
         rec_env.render()
+    rec_env.close()
 
     trainer.run.log(
         {
