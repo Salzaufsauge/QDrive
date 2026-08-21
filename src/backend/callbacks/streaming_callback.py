@@ -38,6 +38,9 @@ class StreamingCallback(BaseCallback):
                 deterministic=self.deterministic,
                 render=False,
             )
+
+            mean_reward = float(mean_reward)  # fix YAML dumping issue
+
             log(
                 "INFO",
                 f"Evaluation over {self.n_eval_episodes} episodes: {mean_reward:.2f} +/- {std_reward:.2f}",

@@ -18,6 +18,7 @@ def load_config(config_path: Path):
 def save_model(config: ExperimentConfig, model):
     model_path = config.abs_model_path
     vecnorm = model.get_vec_normalize_env()
+    model_path.parent.mkdir(parents=True, exist_ok=True)
     if vecnorm is not None:
         vecnorm_path = str(model_path).replace(".zip", ".pkl")
         vecnorm.save(vecnorm_path)
