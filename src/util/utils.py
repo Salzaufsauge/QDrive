@@ -1,5 +1,6 @@
 import copy
 import datetime
+import re
 import sys
 from functools import cache
 from pathlib import Path
@@ -108,3 +109,12 @@ def log(level: str, message: str):
             f"{datetime.datetime.now(tz=datetime.UTC).strftime('%H:%M:%S')} - {level} - {message}",
             file=sys.stderr,
         )
+
+
+def cleanup_ansi(text: str) -> str:
+    # Source - https://stackoverflow.com/a/14693789
+    # Posted by Martijn Pieters, modified by community. See post 'Timeline' for change history
+    # Retrieved 2026-08-21, License - CC BY-SA 4.0
+
+    ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+    return ansi_escape.sub("", text)

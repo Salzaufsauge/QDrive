@@ -11,6 +11,7 @@ from frontend.components.env_tab import EnvTab
 from frontend.components.model_tab import ModelTab
 from frontend.components.wrapper_tab import WrapperTab
 from util.teestream import StreamType
+from util.utils import cleanup_ansi
 
 
 class TrainingTab:
@@ -147,9 +148,9 @@ class TrainingTab:
                     msg = await subscription.client_queue.get()
                     match msg.stream_type:
                         case StreamType.STDERR:
-                            console.push(msg.message, classes="text-red")
+                            console.push(cleanup_ansi(msg.message), classes="text-red")
                         case StreamType.STDOUT:
-                            console.push(msg.message)
+                            console.push(cleanup_ansi(msg.message))
             finally:
                 self.logging_broker.unsubscribe(subscription)
 
