@@ -153,9 +153,9 @@ activemq-data/
 .env
 .envrc
 .venv
-env/
-venv/
 ENV/
+venv/
+env/
 env.bak/
 venv.bak/
 
@@ -312,5 +312,8 @@ models/
 !models/.keep
 experiments/
 !experiments/.keep
+wandb/
 
-src/ui/components/*.pyi
+src/frontend/components/*.pyi
+
+!src/backend/env/

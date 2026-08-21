@@ -1,0 +1,9 @@
+eval:
+  env_wrappers:
+    VecNormalize:
+      training: false
+      norm_reward: false
+train:
+  env_wrappers:
+    VecNormalize:
+      training: true
