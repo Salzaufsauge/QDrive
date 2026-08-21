@@ -3,6 +3,7 @@ from stable_baselines3.common.evaluation import evaluate_policy
 
 from util.utils import copy_vecnorm, get_project_root, log
 from util.video import record_and_upload_video
+from util.wandb_logging import log_wandb_metrics
 
 
 class MilestoneCallback(BaseCallback):
@@ -23,8 +24,17 @@ class MilestoneCallback(BaseCallback):
                 model_base_path = self.trainer.config.model_path.replace(".zip", "")
                 video_base_path = model_base_path.replace("models", "experiments")
                 copy_vecnorm(self.model, self.eval_env)
-                mean_reward, _std_reward = evaluate_policy(
+                mean_reward, std_reward = evaluate_policy(
                     self.model, self.eval_env, n_eval_episodes=10
+                )
+                log_wandb_metrics(
+                    self.trainer.run,
+                    self.current_milestone,
+                    {
+                        "milestone/mean_reward": mean_reward,
+                        "milestone/std_reward": std_reward,
+                        "milestone/n_episodes": 10,
+                    },
                 )
                 video_path = (
                     get_project_root() / video_base_path / str(self.current_milestone)

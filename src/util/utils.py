@@ -116,5 +116,8 @@ def cleanup_ansi(text: str) -> str:
     # Posted by Martijn Pieters, modified by community. See post 'Timeline' for change history
     # Retrieved 2026-08-21, License - CC BY-SA 4.0
 
-    ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+    ansi_escape = re.compile(
+        r"\r?\x1B\[Am\x1B\[2K\r?"
+        r"|\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])"
+    )
     return ansi_escape.sub("", text)
