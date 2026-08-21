@@ -1,8 +1,7 @@
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.evaluation import evaluate_policy
-from stable_baselines3.common.vec_env import VecVideoRecorder
 
-import wandb
+from util.video import record_and_upload_video
 from util.utils import copy_vecnorm, get_project_root, log
 
 
@@ -39,13 +38,15 @@ class MilestoneCallback(BaseCallback):
                 vecnorm_path = str(model_path).replace(".zip", ".pkl")
                 vecnorm = self.model.get_vec_normalize_env()
                 self.model.save(model_path)
-                rec_env = VecVideoRecorder(
+                record_and_upload_video(
+                    self.trainer,
+                    self.model,
                     self.eval_env,
-                    str(video_path),
-                    record_video_trigger=lambda x: x == 0,
-                    video_length=2000,
-                    name_prefix=str(self.current_milestone) + "-",
+                    video_path,
+                    caption=f"{self.trainer.config.algorithm} at step {self.current_milestone}",
+                    step=self.current_milestone,
                 )
+                
                 obs = rec_env.reset()
                 for _ in range(2000):
                     action, _states = self.model.predict(obs, deterministic=True)
@@ -57,21 +58,12 @@ class MilestoneCallback(BaseCallback):
                     vecnorm.save(vecnorm_path)
                     self.trainer.run.log_model(vecnorm_path)
                 self.trainer.run.log_model(model_path)
-                self.trainer.run.log(
-                    {
-                        "video": wandb.Video(
-                            rec_env.video_path,
-                            caption=f"{self.trainer.config.algorithm} at step {self.current_milestone}",
-                            format="mp4",
-                        )
-                    },
-                    step=self.current_milestone,
-                )
 
                 log(
                     "INFO",
                     f"Milestone {self.current_milestone} done | reward={mean_reward:.2f}",
                 )
+
             except Exception as e:
                 log("ERROR", f"Milestone evaluation failed: {e}")
                 raise

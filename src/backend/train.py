@@ -11,6 +11,7 @@ from backend.env.env_manager import EnvMode, build_env
 from backend.state.train_state import TrainState
 from util.inspection_helper import load_algorithms
 from util.utils import get_project_root, log
+from util.video import record_pending_best_model
 
 
 class Train:
@@ -20,6 +21,7 @@ class Train:
         self.config = None
         self.state = None
         self.run = None
+        self.pending_best_model = None
 
     def train(self, config: ExperimentConfig):
         self.running.set()
@@ -48,9 +50,9 @@ class Train:
                 model = model_class.load(env=env, path=config.abs_model_path)
                 vecnorm = model.get_vec_normalize_env()
                 if vecnorm is not None:
-                    vecnorm.load(
-                        str(config.abs_model_path).replace(".zip", ".pkl"), venv=vecnorm
-                    )
+                    loaded = vecnorm.load(str(config.abs_model_path).replace(".zip", ".pkl"), venv=vecnorm)
+                    vecnorm.obs_rms = loaded.obs_rms
+                    vecnorm.ret_rms = loaded.ret_rms
             else:
                 model = model_class(
                     **(
@@ -68,6 +70,9 @@ class Train:
                 sync_tensorboard=True,
                 monitor_gym=True,
             )
+
+            self.run.define_metric("video_step")
+            self.run.define_metric("video", step_metric="video_step")
 
             streaming_callback = StreamingCallback(
                 self,
@@ -103,6 +108,8 @@ class Train:
 
             log("INFO", "Training finished")
 
+            record_pending_best_model(self, eval_env)
+
             artifact = wandb.Artifact(f"run-{self.run.id}-config", type="config")
             artifact.add_file(
                 get_project_root()
@@ -111,9 +118,14 @@ class Train:
                 )
             )
             self.run.log_artifact(artifact)
-            self.run.log_model(
-                config.abs_model_path,
-            )
+
+            vecnorm = model.get_vec_normalize_env()
+            if vecnorm is not None:
+                vecnorm_path = str(config.abs_model_path).replace(".zip", ".pkl")
+                vecnorm.save(vecnorm_path)
+                self.run.log_model(vecnorm_path)
+
+            self.run.log_model(config.abs_model_path)
             self.run.finish(0)
         except Exception as e:
             if self.run is not None:
