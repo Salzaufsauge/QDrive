@@ -42,8 +42,8 @@ def build_env(config: ExperimentConfig, mode: EnvMode) -> VecEnv:
 def build_wrapper(wrapper_config: dict, mode: EnvMode):
     wrappers = load_env_wrappers()
 
-    gym_env_wrappers = list()
-    vec_env_wrappers = list()
+    gym_env_wrappers = []
+    vec_env_wrappers = []
 
     overrides: dict = load_overrides()[mode.value]["env_wrappers"]
 

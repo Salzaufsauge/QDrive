@@ -7,7 +7,7 @@ from pathlib import Path
 from backend.config.storage import load_config
 from backend.controller import Controller
 from frontend import Editor
-from util.LoggingBroker import LoggingBroker
+from util.logging_broker import LoggingBroker
 from util.teestream import StreamType, TeeStream
 from util.utils import get_project_root
 

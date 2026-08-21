@@ -47,11 +47,11 @@ class TrainingTab:
     def get_training_state(self):
         alive, run_id, run_type, run_config = self.controller.get_run_snapshot()
 
+        if run_type != "train":
+            return
+
         self.train_btn.set_visibility(not alive)
         self.stop_btn.set_visibility(alive)
-
-        if alive is None:
-            return
 
         if alive and run_id != self.cur_run_id:
             self.cur_run_id = run_id
