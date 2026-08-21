@@ -30,7 +30,7 @@ class Evaluate:
         try:
             while self.running.is_set():
                 action, _states = model.predict(obs, deterministic=True)
-                obs, rewards, done, info = env.step(action)
+                obs, _rewards, done, _info = env.step(action)
                 frame = env.render(mode=mode)
                 if frame is not None:
                     with self.frame_lock:

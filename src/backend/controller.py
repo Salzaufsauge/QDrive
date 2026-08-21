@@ -23,8 +23,6 @@ class Controller:
         self.config = None
 
     def start_training(self, config: ExperimentConfig):
-        self.run_type = RunType.TRAIN
-        self.config = config
         self._start_thread(self.training.train, (config,))
 
     def get_run_snapshot(self):
@@ -38,21 +36,23 @@ class Controller:
         )
 
     async def stop_training(self):
+        if self.run_type != RunType.TRAIN:
+            raise RuntimeError("No training is running")
         await self._stop_thread(self.training)
 
     async def stop_all(self):
         try:
-            await self._stop_thread(self.training)
-            await self._stop_thread(self.eval)
+            target = self.training if self.run_type == RunType.TRAIN else self.eval
+            await self._stop_thread(target)
         except Exception as e:
             print(e, file=sys.stderr)
 
     def start_eval(self, config: ExperimentConfig, mode: str = "rgb_array"):
-        self.run_type = RunType.EVAL
-        self.config = config
         self._start_thread(self.eval.evaluate, (config, mode))
 
     async def stop_eval(self):
+        if self.run_type != RunType.EVAL:
+            raise RuntimeError("No evaluation is running")
         await self._stop_thread(self.eval)
 
     def get_training_state(self, sequence_after: int = 0):
@@ -63,7 +63,9 @@ class Controller:
 
     def _start_thread(self, target, args):  # for now allow only one of the modes to run
         if self.thread is not None and self.thread.is_alive():
-            raise RuntimeError("A thread is already running")
+            raise RuntimeError(f"A {self.run_type} is already running")
+        self.run_type = RunType.TRAIN if target == self.training.train else RunType.EVAL
+        self.config = args[0]
         self.thread = threading.Thread(target=target, args=args, daemon=True)
         self.thread.start()
         self.run_id = uuid.uuid4()

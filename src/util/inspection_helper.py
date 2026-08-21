@@ -52,7 +52,7 @@ def discover_classes(packages, predicate):
         for modname in iter_modules(resolve_name(package)):
             try:
                 module = importlib.import_module(modname)
-            except Exception:
+            except Exception:  # noqa: S112
                 continue
             for name, obj in inspect.getmembers(module, inspect.isclass):
                 if predicate(name, obj):
@@ -220,7 +220,7 @@ def unwrap_optional(annotation):
     args = typing.get_args(annotation)
 
     if origin is types.UnionType and type(None) in args:
-        return [a for a in args if a is not type(None)][0]
+        return next(a for a in args if a is not type(None))
 
     return annotation
 

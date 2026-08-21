@@ -28,11 +28,19 @@ class EvalTab:
             ui.notify("No model loaded", type="negative")
             await self.stop_eval(eval_timer)
             return
-        self.controller.start_eval(self.config)
-        eval_timer.activate()
+        try:
+            self.controller.start_eval(self.config)
+            eval_timer.activate()
+        except RuntimeError as e:  # edge cases
+            ui.notify(str(e), type="negative")
+            self.eval_btn.set_visibility(True)
+            self.stop_btn.set_visibility(False)
 
     async def stop_eval(self, eval_timer: ui.timer):
-        await self.controller.stop_eval()
+        try:
+            await self.controller.stop_eval()
+        except RuntimeError as e:  # edge cases
+            ui.notify(str(e), type="negative")
 
         eval_timer.deactivate()
 

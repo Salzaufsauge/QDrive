@@ -1,6 +1,6 @@
 from enum import Enum
 
-from util.LoggingBroker import LoggingBroker
+from util.logging_broker import LoggingBroker
 
 
 class StreamType(Enum):
