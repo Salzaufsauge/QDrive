@@ -62,3 +62,11 @@ class ExperimentConfig:
     @property
     def callback_params(self):
         return self.config["callback_params"]
+
+    @property
+    def best_reward(self):
+        return self.config.get("best_reward", float("-inf"))
+
+    @best_reward.setter
+    def best_reward(self, value):
+        self.config["best_reward"] = value

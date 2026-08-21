@@ -19,7 +19,7 @@ class StreamingCallback(BaseCallback):
         super().__init__(verbose)
         self.trainer = trainer
         self.state = state
-        self.best_reward = -float("inf")
+        self.best_reward = trainer.config.best_reward
         self.last_timesteps = 0
         self.eval_env = eval_env
         self.eval_freq = eval_freq
@@ -45,6 +45,7 @@ class StreamingCallback(BaseCallback):
             if mean_reward > self.best_reward:
                 log("INFO", f"New best reward: {mean_reward:.2f}")
                 self.best_reward = mean_reward
+                self.trainer.config.best_reward = mean_reward
                 self.trainer.config.current_timesteps = (
                     self.num_timesteps
                     - self.last_timesteps

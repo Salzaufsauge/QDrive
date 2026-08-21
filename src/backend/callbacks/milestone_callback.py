@@ -1,8 +1,7 @@
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.evaluation import evaluate_policy
 
-from backend.callbacks.video import record_and_upload_video, record_pending_best_model
-import wandb
+from util.video import record_and_upload_video
 from util.utils import copy_vecnorm, get_project_root, log
 
 
@@ -57,7 +56,6 @@ class MilestoneCallback(BaseCallback):
                     "INFO",
                     f"Milestone {self.current_milestone} done | reward={mean_reward:.2f}",
                 )
-                record_pending_best_model(self.trainer, self.eval_env)
 
             except Exception as e:
                 log("ERROR", f"Milestone evaluation failed: {e}")

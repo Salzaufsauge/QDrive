@@ -11,7 +11,7 @@ from backend.env.env_manager import EnvMode, build_env
 from backend.state.train_state import TrainState
 from util.inspection_helper import load_algorithms
 from util.utils import get_project_root, log
-from backend.callbacks.video import record_pending_best_model
+from util.video import record_pending_best_model
 
 
 class Train:

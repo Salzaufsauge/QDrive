@@ -1,5 +1,4 @@
 import asyncio
-from functools import partial
 from pathlib import Path
 
 from nicegui import ui
