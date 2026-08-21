@@ -50,7 +50,9 @@ class Train:
                 model = model_class.load(env=env, path=config.abs_model_path)
                 vecnorm = model.get_vec_normalize_env()
                 if vecnorm is not None:
-                    loaded = vecnorm.load(str(config.abs_model_path).replace(".zip", ".pkl"), venv=vecnorm)
+                    loaded = vecnorm.load(
+                        str(config.abs_model_path).replace(".zip", ".pkl"), venv=vecnorm
+                    )
                     vecnorm.obs_rms = loaded.obs_rms
                     vecnorm.ret_rms = loaded.ret_rms
             else:

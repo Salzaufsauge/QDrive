@@ -1,8 +1,8 @@
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.evaluation import evaluate_policy
 
-from util.video import record_and_upload_video
 from util.utils import copy_vecnorm, get_project_root, log
+from util.video import record_and_upload_video
 
 
 class MilestoneCallback(BaseCallback):
@@ -46,13 +46,6 @@ class MilestoneCallback(BaseCallback):
                     caption=f"{self.trainer.config.algorithm} at step {self.current_milestone}",
                     step=self.current_milestone,
                 )
-                
-                obs = rec_env.reset()
-                for _ in range(2000):
-                    action, _states = self.model.predict(obs, deterministic=True)
-                    obs, _rewards, _dones, _info = rec_env.step(action)
-                    rec_env.render()
-                rec_env.close()
 
                 if vecnorm is not None:
                     vecnorm.save(vecnorm_path)

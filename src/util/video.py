@@ -1,8 +1,12 @@
-import wandb
 from stable_baselines3.common.vec_env import VecVideoRecorder
+
+import wandb
 from util.utils import get_project_root, log
 
-def record_and_upload_video(trainer, model, eval_env, video_path, caption, step, video_length=2000):
+
+def record_and_upload_video(
+    trainer, model, eval_env, video_path, caption, step, video_length=2000
+):
     rec_env = VecVideoRecorder(
         eval_env,
         str(video_path),
@@ -13,7 +17,7 @@ def record_and_upload_video(trainer, model, eval_env, video_path, caption, step,
     obs = rec_env.reset()
     for _ in range(video_length):
         action, _states = model.predict(obs, deterministic=True)
-        obs, rewards, dones, info = rec_env.step(action)
+        obs, _rewards, _dones, _info = rec_env.step(action)
         rec_env.render()
 
     trainer.run.log(
@@ -41,9 +45,9 @@ def record_pending_best_model(trainer, eval_env):
         vecnorm.ret_rms = loaded.ret_rms
 
     video_path = (
-            get_project_root()
-            / trainer.config.model_path.replace("models", "experiments").replace(".zip", "")
-            / "best"
+        get_project_root()
+        / trainer.config.model_path.replace("models", "experiments").replace(".zip", "")
+        / "best"
     )
     record_and_upload_video(
         trainer,
