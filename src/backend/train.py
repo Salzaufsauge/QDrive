@@ -1,5 +1,6 @@
 import copy
 import threading
+import traceback
 
 from stable_baselines3.common.callbacks import CallbackList
 from wandb.integration.sb3 import WandbCallback
@@ -56,12 +57,7 @@ class Train:
                     vecnorm.obs_rms = loaded.obs_rms
                     vecnorm.ret_rms = loaded.ret_rms
             else:
-                model = model_class(
-                    **(
-                        model_param
-                        | {"env": env, "tensorboard_log": get_project_root() / "logs"}
-                    )
-                )
+                model = model_class(**(model_param | {"env": env}))
 
             self.run = wandb.init(
                 project="QDrive",
@@ -69,7 +65,6 @@ class Train:
                 config=config.config,
                 name=run_name,
                 dir=get_project_root(),
-                sync_tensorboard=True,
                 monitor_gym=True,
             )
 
@@ -104,7 +99,6 @@ class Train:
 
             model.learn(
                 total_timesteps=config.config.get("total_timesteps"),
-                tb_log_name=self.run.id,
                 callback=callback,
             )
 
@@ -129,10 +123,15 @@ class Train:
 
             self.run.log_model(config.abs_model_path)
             self.run.finish(0)
-        except Exception as e:
+        except Exception:
+            failure = traceback.format_exc()
             if self.run is not None:
-                self.run.finish(1)
-            log("ERROR", f"Training failed: {e}")
+                try:
+                    self.run.finish(1)
+                except Exception:
+                    failure += "\nWandb failed to finish run:"
+                    failure += traceback.format_exc()
+            log("ERROR", f"Training failed: {failure}")
         finally:
             if env is not None:
                 try:
