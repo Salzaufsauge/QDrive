@@ -17,7 +17,7 @@ class LoggingBroker:
         self.subs.discard(client_queue)
 
     def subscribe(self):
-        subscription = LoggingSubscription(asyncio.Queue())
+        subscription = LoggingSubscription(asyncio.Queue(maxsize=1000))
         for message in self.history:
             subscription.client_queue.put_nowait(message)
         self.subs.add(subscription)

@@ -85,7 +85,9 @@ class TrainingTab:
 
             self.figure["data"][env]["x"].append(x)
             self.figure["data"][env]["y"].append(y)
-            self.graph.run_plot_method("extendTraces", {"x": [[x]], "y": [[y]]}, [env])
+            self.graph.run_plot_method(
+                "extendTraces", {"x": [[x]], "y": [[y]]}, [env], 10000
+            )
 
     async def stop_training(self):
         await self.controller.stop_training()
@@ -137,7 +139,7 @@ class TrainingTab:
             ui.row().classes("w-full"),
             ui.keep_alive(),
         ):
-            console = ui.log().classes("flex-1").style("height: 400px")
+            console = ui.log(max_lines=1000).classes("flex-1").style("height: 400px")
             self.graph = ui.plotly({}).classes("flex-1").style("height: 400px")
 
         subscription = self.logging_broker.subscribe()
