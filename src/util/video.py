@@ -15,9 +15,6 @@ def record_and_upload_video(
     history_step=None,
 ):
     video_step = int(step)
-    # W&B uses the current local history step in the media filename; keep it
-    # separate from video_step so a best checkpoint can retain its actual
-    # training step.
     history_step = video_step if history_step is None else int(history_step)
     rec_env = VecVideoRecorder(
         eval_env,

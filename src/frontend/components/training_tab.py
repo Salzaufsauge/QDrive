@@ -15,6 +15,8 @@ from util.utils import cleanup_ansi
 
 
 class TrainingTab:
+    PLOT_MAX_POINTS = 10_000
+
     def __init__(self, controller: Controller, config_path: Path, logging_broker):
         self.config_loader = None
         self.controller = controller
@@ -77,17 +79,30 @@ class TrainingTab:
         self.graph.update_figure(self.figure)
 
     def extend_plot(self, data):
+        updated_envs = set()
         for episode in data:
             env = episode["env_num"]
 
             x = episode["timesteps"]
             y = episode["reward"]
 
-            self.figure["data"][env]["x"].append(x)
-            self.figure["data"][env]["y"].append(y)
+            trace = self.figure["data"][env]
+            trace["x"].append(x)
+            trace["y"].append(y)
+            updated_envs.add(env)
+
             self.graph.run_plot_method(
-                "extendTraces", {"x": [[x]], "y": [[y]]}, [env], 10000
+                "extendTraces",
+                {"x": [[x]], "y": [[y]]},
+                [env],
+                self.PLOT_MAX_POINTS,
             )
+
+        for env in updated_envs:
+            trace = self.figure["data"][env]
+            if len(trace["x"]) > self.PLOT_MAX_POINTS:
+                trace["x"] = trace["x"][-self.PLOT_MAX_POINTS :]
+                trace["y"] = trace["y"][-self.PLOT_MAX_POINTS :]
 
     async def stop_training(self):
         await self.controller.stop_training()
