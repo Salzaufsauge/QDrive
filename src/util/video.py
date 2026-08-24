@@ -1,7 +1,7 @@
 from stable_baselines3.common.vec_env import VecVideoRecorder
 
 import wandb
-from util.utils import get_project_root, log
+from util.utils import get_project_root, load_vecnorm_stats, log
 
 
 def record_and_upload_video(
@@ -45,11 +45,7 @@ def record_pending_best_model(trainer, eval_env, history_step=None):
     best_model = model_class.load(pending["model_path"], env=eval_env)
 
     vecnorm_path = str(pending["model_path"]).replace(".zip", ".pkl")
-    vecnorm = best_model.get_vec_normalize_env()
-    if vecnorm is not None:
-        loaded = vecnorm.load(vecnorm_path, venv=vecnorm)
-        vecnorm.obs_rms = loaded.obs_rms
-        vecnorm.ret_rms = loaded.ret_rms
+    load_vecnorm_stats(vecnorm_path, eval_env)
 
     video_path = (
         get_project_root()

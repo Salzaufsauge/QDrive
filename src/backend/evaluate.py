@@ -3,6 +3,7 @@ import threading
 from backend.config.config import ExperimentConfig
 from backend.env.env_manager import EnvMode, build_env
 from util.inspection_helper import load_algorithms
+from util.utils import load_vecnorm_stats
 
 
 class Evaluate:
@@ -20,13 +21,10 @@ class Evaluate:
         model = self.algorithms.get(config.algorithm).load(
             config.abs_model_path, env=env
         )
-        vecnorm = model.get_vec_normalize_env()
-        if vecnorm is not None:
-            loaded = vecnorm.load(
-                str(config.abs_model_path).replace(".zip", ".pkl"), venv=vecnorm
-            )
-            vecnorm.obs_rms = loaded.obs_rms
-            vecnorm.ret_rms = loaded.ret_rms
+        load_vecnorm_stats(
+            str(config.abs_model_path).replace(".zip", ".pkl"),
+            env,
+        )
         obs = env.reset()
 
         try:
