@@ -3,6 +3,7 @@ from stable_baselines3.common.evaluation import evaluate_policy
 
 from backend.config.storage import save_config, save_model
 from util.utils import copy_vecnorm, log
+from util.wandb_logging import log_wandb_metrics
 
 
 class StreamingCallback(BaseCallback):
@@ -21,6 +22,9 @@ class StreamingCallback(BaseCallback):
         self.state = state
         self.best_reward = trainer.config.best_reward
         self.last_timesteps = 0
+        self.train_start_timesteps = int(
+            trainer.config.config.get("current_timesteps", 0)
+        )
         self.eval_env = eval_env
         self.eval_freq = eval_freq
         self.n_eval_episodes = n_eval_episodes
@@ -40,6 +44,18 @@ class StreamingCallback(BaseCallback):
             )
 
             mean_reward = float(mean_reward)  # fix YAML dumping issue
+            std_reward = float(std_reward)
+            global_step = self.train_start_timesteps + self.num_timesteps
+
+            log_wandb_metrics(
+                self.trainer.run,
+                global_step,
+                {
+                    "eval/mean_reward": mean_reward,
+                    "eval/std_reward": std_reward,
+                    "eval/n_episodes": self.n_eval_episodes,
+                },
+            )
 
             log(
                 "INFO",

@@ -5,14 +5,23 @@ from util.utils import get_project_root, log
 
 
 def record_and_upload_video(
-    trainer, model, eval_env, video_path, caption, step, video_length=2000
+    trainer,
+    model,
+    eval_env,
+    video_path,
+    caption,
+    step,
+    video_length=2000,
+    history_step=None,
 ):
+    video_step = int(step)
+    history_step = video_step if history_step is None else int(history_step)
     rec_env = VecVideoRecorder(
         eval_env,
         str(video_path),
         record_video_trigger=lambda x: x == 0,
         video_length=video_length,
-        name_prefix=str(step) + "-",
+        name_prefix=str(video_step) + "-",
     )
     obs = rec_env.reset()
     for _ in range(video_length):
@@ -21,15 +30,12 @@ def record_and_upload_video(
         rec_env.render()
     rec_env.close()
 
-    trainer.run.log(
-        {
-            "video": wandb.Video(rec_env.video_path, caption=caption, format="mp4"),
-            "video_step": step,
-        }
-    )
+    video = wandb.Video(rec_env.video_path, caption=caption, format="mp4")
+    trainer.run.log({"video_step": video_step}, step=history_step, commit=False)
+    trainer.run.log({"video": video}, step=history_step, commit=True)
 
 
-def record_pending_best_model(trainer, eval_env):
+def record_pending_best_model(trainer, eval_env, history_step=None):
     pending = trainer.pending_best_model
     if pending is None:
         return
@@ -57,5 +63,6 @@ def record_pending_best_model(trainer, eval_env):
         video_path,
         caption=f"best model so far, reward={pending['reward']:.2f}",
         step=pending["timesteps"],
+        history_step=history_step,
     )
     trainer.pending_best_model = None

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 @dataclass(eq=False)
 class LoggingSubscription:
     client_queue: asyncio.Queue
+    dropped_messages: int = 0
 
 
 class LoggingBroker:
@@ -17,7 +18,7 @@ class LoggingBroker:
         self.subs.discard(client_queue)
 
     def subscribe(self):
-        subscription = LoggingSubscription(asyncio.Queue())
+        subscription = LoggingSubscription(asyncio.Queue(maxsize=1000))
         for message in self.history:
             subscription.client_queue.put_nowait(message)
         self.subs.add(subscription)
@@ -25,5 +26,18 @@ class LoggingBroker:
 
     def publish(self, message):
         self.history.append(message)
-        for client in self.subs:
-            client.client_queue.put_nowait(message)
+        for client in tuple(self.subs):
+            try:
+                client.client_queue.put_nowait(message)
+            except asyncio.QueueFull:
+                try:
+                    client.client_queue.get_nowait()
+                except asyncio.QueueEmpty:
+                    pass
+                else:
+                    client.dropped_messages += 1
+
+                try:
+                    client.client_queue.put_nowait(message)
+                except asyncio.QueueFull:
+                    client.dropped_messages += 1

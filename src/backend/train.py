@@ -3,6 +3,7 @@ import threading
 import traceback
 
 from stable_baselines3.common.callbacks import CallbackList
+from stable_baselines3.common.utils import configure_logger
 from wandb.integration.sb3 import WandbCallback
 
 import wandb
@@ -13,6 +14,7 @@ from backend.state.train_state import TrainState
 from util.inspection_helper import load_algorithms
 from util.utils import get_project_root, log
 from util.video import record_pending_best_model
+from util.wandb_logging import WandbOutputFormat, configure_wandb_metrics
 
 
 class Train:
@@ -28,6 +30,7 @@ class Train:
         self.running.set()
         self.state = TrainState()
         self.config = copy.deepcopy(config)
+        train_start_timesteps = int(config.config.get("current_timesteps", 0))
 
         log("INFO", "Starting training")
         log("INFO", f"Training config: {config.config}")
@@ -68,8 +71,18 @@ class Train:
                 monitor_gym=True,
             )
 
-            self.run.define_metric("video_step")
-            self.run.define_metric("video", step_metric="video_step")
+            configure_wandb_metrics(self.run)
+            model_logger = configure_logger(
+                model.verbose,
+                reset_num_timesteps=True,
+            )
+            model.set_logger(model_logger)
+            model_logger.output_formats.append(
+                WandbOutputFormat(
+                    self.run,
+                    step_offset=train_start_timesteps,
+                )
+            )
 
             streaming_callback = StreamingCallback(
                 self,
@@ -84,8 +97,8 @@ class Train:
                 deterministic=config.callback_params["deterministic"],
             )
             milestone_callback = (
-                MilestoneCallback(self, eval_env, config.milestones)
-                if config.milestones
+                MilestoneCallback(self, eval_env, config.milestones, n_eval_episodes=config.callback_params["n_eval_episodes"])
+                if config.milestones 
                 else None
             )
             wandb_callback = WandbCallback(
@@ -104,7 +117,13 @@ class Train:
 
             log("INFO", "Training finished")
 
-            record_pending_best_model(self, eval_env)
+            record_pending_best_model(
+                self,
+                eval_env,
+                history_step=train_start_timesteps
+                + int(model.num_timesteps)
+                + 1,  # +1 in case of last milestone == total_timesteps
+            )
 
             artifact = wandb.Artifact(f"run-{self.run.id}-config", type="config")
             artifact.add_file(

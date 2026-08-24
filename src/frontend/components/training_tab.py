@@ -11,9 +11,12 @@ from frontend.components.env_tab import EnvTab
 from frontend.components.model_tab import ModelTab
 from frontend.components.wrapper_tab import WrapperTab
 from util.teestream import StreamType
+from util.utils import cleanup_ansi
 
 
 class TrainingTab:
+    PLOT_MAX_POINTS = 10_000
+
     def __init__(self, controller: Controller, config_path: Path, logging_broker):
         self.config_loader = None
         self.controller = controller
@@ -76,15 +79,30 @@ class TrainingTab:
         self.graph.update_figure(self.figure)
 
     def extend_plot(self, data):
+        updated_envs = set()
         for episode in data:
             env = episode["env_num"]
 
             x = episode["timesteps"]
             y = episode["reward"]
 
-            self.figure["data"][env]["x"].append(x)
-            self.figure["data"][env]["y"].append(y)
-            self.graph.run_plot_method("extendTraces", {"x": [[x]], "y": [[y]]}, [env])
+            trace = self.figure["data"][env]
+            trace["x"].append(x)
+            trace["y"].append(y)
+            updated_envs.add(env)
+
+            self.graph.run_plot_method(
+                "extendTraces",
+                {"x": [[x]], "y": [[y]]},
+                [env],
+                self.PLOT_MAX_POINTS,
+            )
+
+        for env in updated_envs:
+            trace = self.figure["data"][env]
+            if len(trace["x"]) > self.PLOT_MAX_POINTS:
+                trace["x"] = trace["x"][-self.PLOT_MAX_POINTS :]
+                trace["y"] = trace["y"][-self.PLOT_MAX_POINTS :]
 
     async def stop_training(self):
         await self.controller.stop_training()
@@ -136,7 +154,7 @@ class TrainingTab:
             ui.row().classes("w-full"),
             ui.keep_alive(),
         ):
-            console = ui.log().classes("flex-1").style("height: 400px")
+            console = ui.log(max_lines=1000).classes("flex-1").style("height: 400px")
             self.graph = ui.plotly({}).classes("flex-1").style("height: 400px")
 
         subscription = self.logging_broker.subscribe()
@@ -147,9 +165,9 @@ class TrainingTab:
                     msg = await subscription.client_queue.get()
                     match msg.stream_type:
                         case StreamType.STDERR:
-                            console.push(msg.message, classes="text-red")
+                            console.push(cleanup_ansi(msg.message), classes="text-red")
                         case StreamType.STDOUT:
-                            console.push(msg.message)
+                            console.push(cleanup_ansi(msg.message))
             finally:
                 self.logging_broker.unsubscribe(subscription)
 
