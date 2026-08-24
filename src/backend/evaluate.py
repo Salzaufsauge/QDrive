@@ -1,5 +1,7 @@
 import threading
 
+import numpy as np
+
 from backend.config.config import ExperimentConfig
 from backend.env.env_manager import EnvMode, build_env
 from util.inspection_helper import load_algorithms
@@ -27,10 +29,19 @@ class Evaluate:
         )
         obs = env.reset()
 
+        lstm_states = None
+        episode_starts = np.ones((env.num_envs,), dtype=bool)
+
         try:
             while self.running.is_set():
-                action, _states = model.predict(obs, deterministic=True)
+                action, lstm_states = model.predict(
+                    obs,
+                    state=lstm_states,
+                    episode_start=episode_starts,
+                    deterministic=True,
+                )
                 obs, _rewards, done, _info = env.step(action)
+                episode_starts = done
                 frame = env.render(mode=mode)
                 if frame is not None:
                     with self.frame_lock:
