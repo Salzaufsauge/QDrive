@@ -97,8 +97,8 @@ class Train:
                 deterministic=config.callback_params["deterministic"],
             )
             milestone_callback = (
-                MilestoneCallback(self, eval_env, config.milestones)
-                if config.milestones
+                MilestoneCallback(self, eval_env, config.milestones, n_eval_episodes=config.callback_params["n_eval_episodes"])
+                if config.milestones 
                 else None
             )
             wandb_callback = WandbCallback(
