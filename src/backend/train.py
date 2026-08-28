@@ -12,7 +12,7 @@ from backend.config.config import ExperimentConfig
 from backend.env.env_manager import EnvMode, build_env
 from backend.state.train_state import TrainState
 from util.inspection_helper import load_algorithms
-from util.utils import get_project_root, log
+from util.utils import build_action_noise, get_project_root, log
 from util.video import record_pending_best_model
 from util.wandb_logging import WandbOutputFormat, configure_wandb_metrics
 
@@ -60,7 +60,11 @@ class Train:
                     vecnorm.obs_rms = loaded.obs_rms
                     vecnorm.ret_rms = loaded.ret_rms
             else:
-                model = model_class(**(model_param | {"env": env}))
+                model_override = {"env": env}
+                if "action_noise" in model_param:
+                    model_override["action_noise"] = build_action_noise(model_param["action_noise"], env)
+
+                model = model_class(**(model_param | model_override))
 
             self.run = wandb.init(
                 project="QDrive",
