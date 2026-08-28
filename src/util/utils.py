@@ -7,8 +7,10 @@ from pathlib import Path
 
 import cv2
 import gymnasium as gym
+import numpy as np
 import yaml
 from nicegui import ui
+from stable_baselines3.common import noise
 from stable_baselines3.common.vec_env import (
     DummyVecEnv,
     SubprocVecEnv,
@@ -44,6 +46,26 @@ def get_vec_env_class(cls):
         case "SubprocVecEnv":
             return SubprocVecEnv
     return None
+
+def build_action_noise(spec: dict, env):
+    spec = dict(spec or {})
+    noise_type = spec.pop("type", None)
+
+    if noise_type is None:
+        return None
+
+    if noise_type not in ("NormalActionNoise", "OrnsteinUhlenbeckActionNoise"):
+        raise ValueError(f"Unknown noise type: {noise_type}")
+
+    n_actions = env.action_space.shape[-1]
+    mean = float(spec.pop("mean", 0.0))
+    sigma = float(spec.pop("sigma", 0.1))
+
+    return getattr(noise, noise_type)(
+        mean=mean * np.ones(n_actions),
+        sigma=sigma * np.ones(n_actions),
+        **spec,
+    )
 
 
 def replace_empty_strings(obj):
