@@ -39,15 +39,7 @@ class MilestoneCallback(BaseCallback):
                         "milestone/n_episodes": self.n_eval_episodes,
                     },
                 )
-                log_wandb_metrics(
-                    self.trainer.run,
-                    self.current_milestone,
-                    {
-                        "milestone/mean_reward": mean_reward,
-                        "milestone/std_reward": std_reward,
-                        "milestone/n_episodes": 10,
-                    },
-                )
+    
                 video_path = (
                     get_project_root() / video_base_path / str(self.current_milestone)
                 )
