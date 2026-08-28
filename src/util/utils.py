@@ -14,6 +14,7 @@ from stable_baselines3.common import noise
 from stable_baselines3.common.vec_env import (
     DummyVecEnv,
     SubprocVecEnv,
+    VecNormalize,
     unwrap_vec_normalize,
 )
 
@@ -104,7 +105,7 @@ def build_ui_params(params: list, elem_per_row: int, action):
 
 
 def copy_vecnorm(model, target_env):
-    src = model.get_vec_normalize_env()
+    src = model if isinstance(model, VecNormalize) else model.get_vec_normalize_env()
     dst = unwrap_vec_normalize(target_env)
     if src is None or dst is None:
         return
@@ -114,6 +115,15 @@ def copy_vecnorm(model, target_env):
 
     if getattr(src, "ret_rms", None) is not None:
         dst.ret_rms = copy.deepcopy(src.ret_rms)
+
+
+def load_vecnorm_stats(vecnorm_path, target_env):
+    dst = unwrap_vec_normalize(target_env)
+    if dst is None:
+        return
+
+    loaded = VecNormalize.load(vecnorm_path, venv=dst.venv)
+    copy_vecnorm(loaded, target_env)
 
 
 def frame_to_data_url(frame):

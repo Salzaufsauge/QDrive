@@ -12,7 +12,7 @@ from backend.config.config import ExperimentConfig
 from backend.env.env_manager import EnvMode, build_env
 from backend.state.train_state import TrainState
 from util.inspection_helper import load_algorithms
-from util.utils import build_action_noise, get_project_root, log
+from util.utils import build_action_noise, get_project_root, load_vecnorm_stats, log
 from util.video import record_pending_best_model
 from util.wandb_logging import WandbOutputFormat, configure_wandb_metrics
 
@@ -52,13 +52,10 @@ class Train:
             model_class = self.algorithms.get(config.algorithm)
             if config.abs_model_path.exists():
                 model = model_class.load(env=env, path=config.abs_model_path)
-                vecnorm = model.get_vec_normalize_env()
-                if vecnorm is not None:
-                    loaded = vecnorm.load(
-                        str(config.abs_model_path).replace(".zip", ".pkl"), venv=vecnorm
-                    )
-                    vecnorm.obs_rms = loaded.obs_rms
-                    vecnorm.ret_rms = loaded.ret_rms
+                load_vecnorm_stats(
+                    str(config.abs_model_path).replace(".zip", ".pkl"),
+                    env,
+                )
             else:
                 model_override = {"env": env}
                 if "action_noise" in model_param:
@@ -101,7 +98,12 @@ class Train:
                 deterministic=config.callback_params["deterministic"],
             )
             milestone_callback = (
-                MilestoneCallback(self, eval_env, config.milestones)
+                MilestoneCallback(
+                    self,
+                    eval_env,
+                    config.milestones,
+                    n_eval_episodes=config.callback_params["n_eval_episodes"],
+                )
                 if config.milestones
                 else None
             )

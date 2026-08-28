@@ -7,13 +7,16 @@ from util.wandb_logging import log_wandb_metrics
 
 
 class MilestoneCallback(BaseCallback):
-    def __init__(self, trainer, eval_env, milestones: list, verbose=0):
+    def __init__(
+        self, trainer, eval_env, milestones: list, verbose=0, n_eval_episodes=10
+    ):
         super().__init__(verbose)
         self.trainer = trainer
         self.eval_env = eval_env
         self.milestones = sorted([int(milestone) for milestone in milestones])
         self.current_milestone = self.milestones.pop(0) if self.milestones else None
         self.train_start_timesteps = trainer.config.config.get("current_timesteps", 0)
+        self.n_eval_episodes = n_eval_episodes
 
     def _on_step(self) -> bool:
         if not self.milestones and self.current_milestone is None:
@@ -25,7 +28,16 @@ class MilestoneCallback(BaseCallback):
                 video_base_path = model_base_path.replace("models", "experiments")
                 copy_vecnorm(self.model, self.eval_env)
                 mean_reward, std_reward = evaluate_policy(
-                    self.model, self.eval_env, n_eval_episodes=10
+                    self.model, self.eval_env, self.n_eval_episodes
+                )
+                log_wandb_metrics(
+                    self.trainer.run,
+                    self.current_milestone,
+                    {
+                        "milestone/mean_reward": mean_reward,
+                        "milestone/std_reward": std_reward,
+                        "milestone/n_episodes": self.n_eval_episodes,
+                    },
                 )
                 log_wandb_metrics(
                     self.trainer.run,
