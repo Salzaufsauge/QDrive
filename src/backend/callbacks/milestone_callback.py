@@ -7,7 +7,9 @@ from util.wandb_logging import log_wandb_metrics
 
 
 class MilestoneCallback(BaseCallback):
-    def __init__(self, trainer, eval_env, milestones: list, verbose=0, n_eval_episodes=10):
+    def __init__(
+        self, trainer, eval_env, milestones: list, verbose=0, n_eval_episodes=10
+    ):
         super().__init__(verbose)
         self.trainer = trainer
         self.eval_env = eval_env
