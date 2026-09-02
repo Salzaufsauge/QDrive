@@ -21,7 +21,7 @@ from stable_baselines3.common.vec_env import (
 
 @cache
 def get_envs():
-    return sorted([env_id for env_id in gym.envs.registry])
+    return sorted([env_id for env_id in gym.envs.registry | {"tmrl": None}])
 
 
 @cache
@@ -46,6 +46,7 @@ def get_vec_env_class(cls):
         case "SubprocVecEnv":
             return SubprocVecEnv
     return None
+
 
 def build_action_noise(spec: dict, env):
     spec = dict(spec or {})

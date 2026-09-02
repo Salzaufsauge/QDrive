@@ -26,7 +26,7 @@ def build_config(params, sig_params):
             if ann is int or int in typing.get_args(ann):
                 val = int(val)
 
-            if isinstance(val,dict):
+            if isinstance(val, dict):
                 temp[key] = {
                     key: parse_val(value)
                     for key, value in val.items()
@@ -54,7 +54,7 @@ def unwrap_ui_elem(elem):
     if isinstance(elem, ui.select) and hasattr(elem, "noise_sigma"):
         if not elem.value:
             return None
-        spec = {"type": elem.value, "sigma":elem.noise_sigma.value}
+        spec = {"type": elem.value, "sigma": elem.noise_sigma.value}
         if elem.value == "OrnsteinUhlenbeckActionNoise":
             spec["theta"] = elem.noise_theta.value
         return spec

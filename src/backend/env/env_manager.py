@@ -3,8 +3,10 @@ from enum import Enum
 from functools import partial
 
 import gymnasium
+import tmrl.config.config_constants as cfg
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import DummyVecEnv, VecEnv, VecEnvWrapper
+from tmrl import CONFIG_DICT, GenericGymEnv
 
 from backend.config.config import ExperimentConfig
 from util.inspection_helper import load_env_wrappers
@@ -25,6 +27,13 @@ def build_env(config: ExperimentConfig, mode: EnvMode) -> VecEnv:
     gym_wrappers, vec_env_wrappers = build_wrapper(wrapper_config, mode)
 
     env_override = {
+        "env_id": partial(
+            GenericGymEnv,
+            id=cfg.RTGYM_VERSION,
+            gym_kwargs={"config": CONFIG_DICT},
+        )
+        if env_config["env_id"] == "tmrl"
+        else env_config["env_id"],
         "vec_env_cls": get_vec_env_class(env_config["vec_env_cls"])
         if mode == EnvMode.TRAIN
         else DummyVecEnv,

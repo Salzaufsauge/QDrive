@@ -11,16 +11,17 @@ dependencies = [
     "gymnasium[all]>=1.3.0",
     "imageio[ffmpeg]==2.37.4",
     "pyyaml>=6.0.3",
-    "polars==1.43.2",
+    "polars==1.44.1",
     "pyarrow==25.0.1",
-    "wandb==0.28.2",
+    "wandb==0.29.0",
     "sb3-contrib==2.9.0",
     "nicegui==3.16.0",
     "pywebview==6.2.1",
-    "plotly==6.9.0",
+    "plotly==7.0.0",
     "rl-zoo3==2.9.1",
     "opencv-python==5.0.0.93",
-    "ruff==0.16.4",
+    "ruff==0.16.5",
+    "tmrl>=0.7.1",
 ]
 
 [build-system]
@@ -36,7 +37,7 @@ torchvision = [
 ]
 
 triton-rocm = [
-    { index = "pytorch-rocm" },
+    { index = "pytorch-cu132" },
 ]
 
 [[tool.uv.index]]

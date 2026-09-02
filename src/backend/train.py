@@ -59,7 +59,9 @@ class Train:
             else:
                 model_override = {"env": env}
                 if "action_noise" in model_param:
-                    model_override["action_noise"] = build_action_noise(model_param["action_noise"], env)
+                    model_override["action_noise"] = build_action_noise(
+                        model_param["action_noise"], env
+                    )
 
                 model = model_class(**(model_param | model_override))
 
@@ -88,7 +90,7 @@ class Train:
             streaming_callback = StreamingCallback(
                 self,
                 self.state,
-                eval_env,
+                env if config.env_params["env_id"] == "tmrl" else eval_env,
                 eval_freq=max(
                     config.callback_params["eval_freq"]
                     // config.env_params.get("n_envs"),
@@ -100,7 +102,7 @@ class Train:
             milestone_callback = (
                 MilestoneCallback(
                     self,
-                    eval_env,
+                    env if config.env_params["env_id"] == "tmrl" else eval_env,
                     config.milestones,
                     n_eval_episodes=config.callback_params["n_eval_episodes"],
                 )
@@ -125,7 +127,7 @@ class Train:
 
             record_pending_best_model(
                 self,
-                eval_env,
+                env if config.env_params["env_id"] == "tmrl" else eval_env,
                 history_step=train_start_timesteps
                 + int(model.num_timesteps)
                 + 1,  # +1 in case of last milestone == total_timesteps
