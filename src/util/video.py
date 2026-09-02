@@ -58,13 +58,17 @@ def record_pending_best_model(trainer, eval_env, history_step=None):
         / trainer.config.model_path.replace("models", "experiments").replace(".zip", "")
         / "best"
     )
-    record_and_upload_video(
-        trainer,
-        best_model,
-        eval_env,
-        video_path,
-        caption=f"best model so far, reward={pending['reward']:.2f}",
-        step=pending["timesteps"],
-        history_step=history_step,
-    )
+    try:
+        record_and_upload_video(
+            trainer,
+            best_model,
+            eval_env,
+            video_path,
+            caption=f"best model so far, reward={pending['reward']:.2f}",
+            step=pending["timesteps"],
+            history_step=history_step,
+        )
+    except Exception as e:
+        log("ERROR", f"Failed to record video of the best Model: {e}")
+
     trainer.pending_best_model = None

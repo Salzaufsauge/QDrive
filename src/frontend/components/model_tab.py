@@ -46,7 +46,6 @@ def make_model_ui(param: inspect.Parameter, algorithms, algo):
         select.noise_theta = theta
         return select
 
-
     if param.name in ("env", "tensorboard_log"):
         elem = ui.label("")
         elem.set_visibility(False)

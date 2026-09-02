@@ -6,3 +6,5 @@ env_wrappers:
   - rl_zoo3
   - stable_baselines3
   - sb3_contrib
+  - tmrl
+  - backend.env
