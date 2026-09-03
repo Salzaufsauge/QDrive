@@ -1,5 +1,4 @@
 import inspect
-import typing
 from datetime import UTC, datetime
 
 from nicegui import ui
