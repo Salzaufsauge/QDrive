@@ -44,6 +44,10 @@ triton-rocm = [
     { index = "pytorch-rocm" },
 ]
 
+triton-rocm = [
+    { index = "pytorch-rocm" },
+]
+
 [[tool.uv.index]]
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"

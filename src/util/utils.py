@@ -47,6 +47,26 @@ def get_vec_env_class(cls):
             return SubprocVecEnv
     return None
 
+def build_action_noise(spec: dict, env):
+    spec = dict(spec or {})
+    noise_type = spec.pop("type", None)
+
+    if noise_type is None:
+        return None
+
+    if noise_type not in ("NormalActionNoise", "OrnsteinUhlenbeckActionNoise"):
+        raise ValueError(f"Unknown noise type: {noise_type}")
+
+    n_actions = env.action_space.shape[-1]
+    mean = float(spec.pop("mean", 0.0))
+    sigma = float(spec.pop("sigma", 0.1))
+
+    return getattr(noise, noise_type)(
+        mean=mean * np.ones(n_actions),
+        sigma=sigma * np.ones(n_actions),
+        **spec,
+    )
+
 
 def build_action_noise(spec: dict, env):
     spec = dict(spec or {})

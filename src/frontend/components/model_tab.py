@@ -19,6 +19,34 @@ def make_model_ui(param: inspect.Parameter, algorithms, algo):
             "flex-grow"
         )
 
+    if param.name == "action_noise":
+        with ui.row(align_items="center", wrap=False).classes("flex-grow"):
+            select = ui.select(
+                options={
+                    None: "action noise (unknown)",
+                    "NormalActionNoise": "NormalActionNoise",
+                    "OrnsteinUhlenbeckActionNoise": "OrnsteinUhlenbeckActionNoise",
+                },
+                value=None,
+                label=param.name,
+                clearable=True,
+            ).classes("flex-grow")
+            sigma = ui.number(
+                label="sigma", value=0.1, min=0, step=0.05, precision=2
+            ).classes("w-24")
+            sigma.bind_visibility_from(select, "value", backward=bool)
+            theta = ui.number(
+                label="theta", value=0.15, min=0, step=0.05, precision=2
+            ).classes("w-24")
+            theta.bind_visibility_from(
+                select, "value", backward=lambda v: v == "OrnsteinUhlenbeckActionNoise"
+            )
+
+        select.noise_sigma = sigma
+        select.noise_theta = theta
+        return select
+
+
     if param.name in ("env", "tensorboard_log"):
         elem = ui.label("")
         elem.set_visibility(False)

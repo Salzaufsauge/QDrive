@@ -1,4 +1,5 @@
 import inspect
+import typing
 from datetime import UTC, datetime
 
 from nicegui import ui
@@ -22,10 +23,10 @@ def build_config(params, sig_params):
         if val is not None:
             ann = unwrap_optional(sig_params[key].annotation)
 
-            if ann is int:
+            if ann is int or int in typing.get_args(ann):
                 val = int(val)
 
-            if key.endswith("kwargs"):
+            if isinstance(val,dict):
                 temp[key] = {
                     key: parse_val(value)
                     for key, value in val.items()
@@ -50,6 +51,14 @@ def build_wrapper_config(params: list, env_wrappers: dict):
 
 
 def unwrap_ui_elem(elem):
+    if isinstance(elem, ui.select) and hasattr(elem, "noise_sigma"):
+        if not elem.value:
+            return None
+        spec = {"type": elem.value, "sigma":elem.noise_sigma.value}
+        if elem.value == "OrnsteinUhlenbeckActionNoise":
+            spec["theta"] = elem.noise_theta.value
+        return spec
+
     if isinstance(
         elem, (ui.input, ui.checkbox, ui.number, ui.textarea, ui.select, ui.input_chips)
     ):
