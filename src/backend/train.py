@@ -10,6 +10,7 @@ import wandb
 from backend.callbacks import MilestoneCallback, StreamingCallback
 from backend.config.config import ExperimentConfig
 from backend.env.env_manager import EnvMode, build_env
+from backend.env.tmrl_env import TMRL_ENV_ID
 from backend.state.train_state import TrainState
 from util.inspection_helper import load_algorithms
 from util.utils import get_project_root, load_vecnorm_stats, log
@@ -46,7 +47,11 @@ class Train:
 
         try:
             env = build_env(config, EnvMode.TRAIN)
-            eval_env = build_env(config, EnvMode.EVAL)
+            eval_env = (
+                env
+                if config.env_params.get("env_id") == TMRL_ENV_ID
+                else build_env(config, EnvMode.EVAL)
+            )
 
             model_param = config.model_params
             model_class = self.algorithms.get(config.algorithm)
@@ -154,7 +159,7 @@ class Train:
                     failure += traceback.format_exc()
             log("ERROR", f"Training failed: {failure}")
         finally:
-            if env is not None:
+            if env is not None and eval_env is not env:
                 try:
                     env.close()
                 except Exception:
