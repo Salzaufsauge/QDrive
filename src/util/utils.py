@@ -47,26 +47,6 @@ def get_vec_env_class(cls):
             return SubprocVecEnv
     return None
 
-def build_action_noise(spec: dict, env):
-    spec = dict(spec or {})
-    noise_type = spec.pop("type", None)
-
-    if noise_type is None:
-        return None
-
-    if noise_type not in ("NormalActionNoise", "OrnsteinUhlenbeckActionNoise"):
-        raise ValueError(f"Unknown noise type: {noise_type}")
-
-    n_actions = env.action_space.shape[-1]
-    mean = float(spec.pop("mean", 0.0))
-    sigma = float(spec.pop("sigma", 0.1))
-
-    return getattr(noise, noise_type)(
-        mean=mean * np.ones(n_actions),
-        sigma=sigma * np.ones(n_actions),
-        **spec,
-    )
-
 
 def build_action_noise(spec: dict, env):
     spec = dict(spec or {})
@@ -87,6 +67,7 @@ def build_action_noise(spec: dict, env):
         sigma=sigma * np.ones(n_actions),
         **spec,
     )
+
 
 def replace_empty_strings(obj):
     if isinstance(obj, dict):
@@ -111,6 +92,11 @@ def get_config_path(model_path):
     conf_path = conf_path.with_suffix(".yaml")
 
     return conf_path
+
+
+def make_model_path(env_id, algorithm, policy):
+    timestamp = datetime.datetime.now(tz=datetime.UTC).strftime("%Y-%m-%d_%H-%M")
+    return f"models/{env_id}/{algorithm}/model-{policy}-{timestamp}.zip"
 
 
 def build_ui_params(params: list, elem_per_row: int, action):

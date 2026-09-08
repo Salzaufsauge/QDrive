@@ -39,7 +39,7 @@ class MilestoneCallback(BaseCallback):
                         "milestone/n_episodes": self.n_eval_episodes,
                     },
                 )
-    
+
                 video_path = (
                     get_project_root() / video_base_path / str(self.current_milestone)
                 )
@@ -47,7 +47,7 @@ class MilestoneCallback(BaseCallback):
                     get_project_root()
                     / model_base_path
                     / str(self.current_milestone)
-                    / f"model-{mean_reward}.zip"
+                    / f"model-{mean_reward:.2f}.zip"
                 )
                 vecnorm_path = str(model_path).replace(".zip", ".pkl")
                 vecnorm = self.model.get_vec_normalize_env()
@@ -60,6 +60,8 @@ class MilestoneCallback(BaseCallback):
                     caption=f"{self.trainer.config.algorithm} at step {self.current_milestone}",
                     step=self.current_milestone,
                 )
+                if self.eval_env is self.training_env:
+                    self.model._last_obs = self.eval_env.reset()
 
                 if vecnorm is not None:
                     vecnorm.save(vecnorm_path)
@@ -73,7 +75,7 @@ class MilestoneCallback(BaseCallback):
 
             except Exception as e:
                 log("ERROR", f"Milestone evaluation failed: {e}")
-                raise
+
             finally:
                 try:
                     self.current_milestone = self.milestones.pop(0)

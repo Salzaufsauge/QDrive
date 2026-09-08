@@ -3,7 +3,7 @@ from gymnasium import ObservationWrapper, spaces
 
 
 class TMRLFullObsWrapper(ObservationWrapper):
-    def __init__(self, env):
+    def __init__(self, env, longitudinal_axis: bool = False):
         super().__init__(env)
 
         raw_space = env.observation_space
@@ -33,8 +33,16 @@ class TMRLFullObsWrapper(ObservationWrapper):
         self.metadata = {
             **env.metadata,
             "render_modes": ["rgb_array"],
-            "render_fps": round(1 / env.unwrapped.time_step_duration),
+            "render_fps": round(
+                1 / (env.unwrapped.time_step_duration * getattr(env, "_skip", 1))
+            ),
         }
+
+        self.longitudinal_axis = longitudinal_axis
+        if longitudinal_axis:
+            self.action_space = spaces.Box(
+                low=-1.0, high=1.0, shape=(2,), dtype=np.float32
+            )
 
     @property
     def render_mode(self):
@@ -53,7 +61,17 @@ class TMRLFullObsWrapper(ObservationWrapper):
             "action_history": np.concatenate(action_history).astype(np.float32),
         }
 
+    def map_action(self, action):
+        if not self.longitudinal_axis:
+            return action
+        lon, steer = float(action[0]), float(action[1])
+        return np.array([max(lon, 0.0), max(-lon, 0.0), steer], dtype=np.float32)
+
+    def step(self, action):
+        return super().step(self.map_action(action))
+
     def render(self):  # mode="human" mit Leon abklären
         if self.last_frame is None:
             return None
-        return np.repeat(self.last_frame[:, :, np.newaxis], 3, axis=2)
+        frame = np.repeat(self.last_frame[:, :, np.newaxis], 3, axis=2)
+        return frame.repeat(4, axis=0).repeat(4, axis=1)

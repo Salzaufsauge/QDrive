@@ -9,6 +9,7 @@ from wandb.integration.sb3 import WandbCallback
 import wandb
 from backend.callbacks import MilestoneCallback, StreamingCallback
 from backend.config.config import ExperimentConfig
+from backend.config.storage import save_config
 from backend.env.env_manager import EnvMode, build_env
 from backend.env.tmrl_env import TMRL_ENV_ID
 from backend.state.train_state import TrainState
@@ -31,7 +32,12 @@ class Train:
         self.running.set()
         self.state = TrainState()
         self.config = copy.deepcopy(config)
+        save_config(self.config)
+
         train_start_timesteps = int(config.config.get("current_timesteps", 0))
+        replay_buffer_path = config.abs_model_path.with_name(
+            config.abs_model_path.stem + "_replay_buffer.pkl"
+        )
 
         log("INFO", "Starting training")
         log("INFO", f"Training config: {config.config}")
@@ -61,10 +67,19 @@ class Train:
                     str(config.abs_model_path).replace(".zip", ".pkl"),
                     env,
                 )
+                if hasattr(model, "load_replay_buffer") and replay_buffer_path.exists():
+                    model.load_replay_buffer(replay_buffer_path)
+                    model.learning_starts = 0
+                    log(
+                        "INFO",
+                        f"Replay buffer loaded with {model.replay_buffer.size()} trnasitions",
+                    )
             else:
                 model_override = {"env": env}
                 if "action_noise" in model_param:
-                    model_override["action_noise"] = build_action_noise(model_param["action_noise"], env)
+                    model_override["action_noise"] = build_action_noise(
+                        model_param["action_noise"], env
+                    )
 
                 model = model_class(**(model_param | model_override))
 
@@ -127,6 +142,11 @@ class Train:
             )
 
             log("INFO", "Training finished")
+            if hasattr(model, "save_replay_buffer") and config.config.get(
+                "save_replay_buffer", True
+            ):
+                model.save_replay_buffer(replay_buffer_path)
+                log("INFO", f"Replay buffer saved to {replay_buffer_path}")
 
             record_pending_best_model(
                 self,

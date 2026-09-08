@@ -1,9 +1,10 @@
+import copy
 from pathlib import Path
 
 import yaml
 
 from backend.config.config import ExperimentConfig
-from util.utils import get_project_root
+from util.utils import get_config_path, get_project_root, make_model_path
 
 
 def load_config(config_path: Path):
@@ -31,3 +32,13 @@ def save_config(config: ExperimentConfig):
     cfg_path.parent.mkdir(parents=True, exist_ok=True)
     with cfg_path.open("w") as f:
         f.write(cfg)
+
+
+def as_new_run(config: ExperimentConfig) -> ExperimentConfig:
+    cfg = copy.deepcopy(config.config)
+    cfg.pop("current_timesteps", None)
+    cfg.pop("best_reward", None)
+    cfg["model_path"] = make_model_path(
+        cfg["env_param"]["env_id"], cfg["algorithm"], cfg["model_param"]["policy"]
+    )
+    return ExperimentConfig(cfg, get_config_path(cfg["model_path"]))
