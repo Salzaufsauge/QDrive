@@ -94,6 +94,11 @@ def get_config_path(model_path):
     return conf_path
 
 
+def make_model_path(env_id, algorithm, policy):
+    timestamp = datetime.datetime.now(tz=datetime.UTC).strftime("%Y-%m-%d_%H-%M")
+    return f"models/{env_id}/{algorithm}/model-{policy}-{timestamp}.zip"
+
+
 def build_ui_params(params: list, elem_per_row: int, action):
     temp = []
 

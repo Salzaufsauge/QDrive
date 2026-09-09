@@ -1,19 +1,18 @@
 import inspect
 import typing
-from datetime import UTC, datetime
 
 from nicegui import ui
 from stable_baselines3.common.env_util import make_vec_env
 
 from backend.config.config import ExperimentConfig
-from backend.config.storage import load_config
+from backend.config.storage import as_new_run, load_config
 from util.inspection_helper import (
     load_algorithms,
     load_env_wrappers,
     parse_val,
     unwrap_optional,
 )
-from util.utils import get_config_path, replace_empty_strings
+from util.utils import get_config_path, make_model_path, replace_empty_strings
 
 
 def build_config(params, sig_params):
@@ -23,8 +22,13 @@ def build_config(params, sig_params):
         if val is not None:
             ann = unwrap_optional(sig_params[key].annotation)
 
-            if ann is int or int in typing.get_args(ann):
+            if ann is int:
                 val = int(val)
+            elif int in typing.get_args(ann):
+                try:
+                    val = int(val)
+                except (TypeError, ValueError):
+                    pass
 
             if isinstance(val, dict):
                 temp[key] = {
@@ -77,8 +81,10 @@ class ConfigBuilder:
         conf = {}
         try:
             config_path = unwrap_ui_elem(params.pop(0))
+            new_run = unwrap_ui_elem(params.pop(0))
             if config_path is not None:
-                return load_config(config_path)
+                cfg = load_config(config_path)
+                return as_new_run(cfg) if new_run else cfg
             conf["env_param"] = {}
             env_params = inspect.signature(make_vec_env).parameters
             conf["env_param"] = conf["env_param"] | build_config(params, env_params)
@@ -91,6 +97,7 @@ class ConfigBuilder:
                 sorted(milestones) if isinstance(milestones, list) else None
             )
             conf["total_timesteps"] = unwrap_ui_elem(params.pop(0))
+            conf["save_replay_buffer"] = unwrap_ui_elem(params.pop(0))
             conf["callback_params"] = {}
             conf["callback_params"]["eval_freq"] = unwrap_ui_elem(params.pop(0))
             conf["callback_params"]["n_eval_episodes"] = unwrap_ui_elem(params.pop(0))
@@ -101,8 +108,10 @@ class ConfigBuilder:
             conf["model_param"] = conf["model_param"] | build_config(
                 params, model_params
             )
-            conf["model_path"] = (
-                f"models/{conf['env_param']['env_id']}/{conf['algorithm']}/model-{conf['model_param']['policy']}-{datetime.now(UTC).strftime('%Y-%m-%d_%H-%M')}.zip"
+            conf["model_path"] = make_model_path(
+                conf["env_param"]["env_id"],
+                conf["algorithm"],
+                conf["model_param"]["policy"],
             )
         except Exception as e:
             raise RuntimeError(f"Error while building config: {e}") from e

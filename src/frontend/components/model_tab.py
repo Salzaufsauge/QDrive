@@ -104,6 +104,9 @@ class ModelTab:
         self.model_params.append(
             ui.number(label="total_timesteps", value=1000000).classes("w-full")
         )
+        self.model_params.append(
+            ui.checkbox(text="save_replay_buffer", value=True).classes("w-full")
+        )
 
         with (
             ui.expansion("Callback Parameters").classes("w-full"),
