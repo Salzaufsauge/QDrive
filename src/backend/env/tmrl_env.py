@@ -17,8 +17,6 @@ def make_tmrl_env():
     else:
         os.environ["WANDB_API_KEY"] = wandb_key
 
-    warnings.filterwarnings("ignore", message="Time-step timed out")
-
     return get_environment()
 
 

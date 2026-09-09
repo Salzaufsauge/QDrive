@@ -1,4 +1,5 @@
 import copy
+import os
 import threading
 import traceback
 
@@ -84,8 +85,8 @@ class Train:
                 model = model_class(**(model_param | model_override))
 
             self.run = wandb.init(
-                project="QDrive",
-                entity="QDrive",
+                project=os.getenv("WANDB_PROJECT", None),
+                entity=os.getenv("WANDB_ENTITY", None),
                 config=config.config,
                 name=run_name,
                 dir=get_project_root(),
