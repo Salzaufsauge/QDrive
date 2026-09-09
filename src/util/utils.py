@@ -21,7 +21,7 @@ from stable_baselines3.common.vec_env import (
 
 @cache
 def get_envs():
-    return sorted([env_id for env_id in gym.envs.registry | {"tmrl": None}])
+    return sorted([env_id for env_id in gym.envs.registry])
 
 
 @cache
