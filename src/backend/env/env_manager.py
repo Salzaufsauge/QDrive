@@ -3,10 +3,8 @@ from enum import Enum
 from functools import partial
 
 import gymnasium
-import tmrl.config.config_constants as cfg
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import DummyVecEnv, VecEnv, VecEnvWrapper
-from tmrl import CONFIG_DICT, GenericGymEnv
 
 from backend.config.config import ExperimentConfig
 from util.inspection_helper import load_env_wrappers
