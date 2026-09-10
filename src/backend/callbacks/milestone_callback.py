@@ -1,6 +1,7 @@
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.evaluation import evaluate_policy
 
+from backend.config.storage import save_checkpoint
 from util.utils import copy_vecnorm, get_project_root, log
 from util.video import record_and_upload_video
 from util.wandb_logging import log_wandb_metrics
@@ -72,6 +73,10 @@ class MilestoneCallback(BaseCallback):
                     "INFO",
                     f"Milestone {self.current_milestone} done | reward={mean_reward:.2f}",
                 )
+
+                log("INFO", "Saving checkpoint....")
+                save_checkpoint(self.trainer.config, self.model)
+                log("INFO", f"Checkpoint saved | step={self.current_milestone}")
 
             except Exception as e:
                 log("ERROR", f"Milestone evaluation failed: {e}")

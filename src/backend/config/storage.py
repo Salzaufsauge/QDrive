@@ -34,6 +34,25 @@ def save_config(config: ExperimentConfig):
         f.write(cfg)
 
 
+def save_checkpoint(config: ExperimentConfig, model):
+    base_path = config.abs_model_path
+    checkpoint_path = base_path.with_name(base_path.stem + "_last.zip")
+    checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+
+    model.save(checkpoint_path)
+
+    vecnorm = model.get_vec_normalize_env()
+    if vecnorm is not None:
+        vecnorm.save(str(checkpoint_path).replace(".zip", ".pkl"))
+
+    if not config.config.get("save_replay_buffer", True):
+        return
+    if not hasattr(model, "save_replay_buffer"):
+        return
+
+    model.save_replay_buffer(base_path.with_name(base_path.stem + "_replay_buffer.pkl"))
+
+
 def as_new_run(config: ExperimentConfig) -> ExperimentConfig:
     cfg = copy.deepcopy(config.config)
     cfg.pop("current_timesteps", None)

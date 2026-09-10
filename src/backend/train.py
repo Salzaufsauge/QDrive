@@ -9,7 +9,7 @@ from wandb.integration.sb3 import WandbCallback
 import wandb
 from backend.callbacks import MilestoneCallback, StreamingCallback
 from backend.config.config import ExperimentConfig
-from backend.config.storage import save_config
+from backend.config.storage import save_checkpoint, save_config
 from backend.env.env_manager import EnvMode, build_env
 from backend.env.tmrl_env import TMRL_ENV_ID
 from backend.state.train_state import TrainState
@@ -142,11 +142,8 @@ class Train:
             )
 
             log("INFO", "Training finished")
-            if hasattr(model, "save_replay_buffer") and config.config.get(
-                "save_replay_buffer", True
-            ):
-                model.save_replay_buffer(replay_buffer_path)
-                log("INFO", f"Replay buffer saved to {replay_buffer_path}")
+            save_checkpoint(self.config, model)
+            log("INFO", "Checkpoint saved")
 
             record_pending_best_model(
                 self,
