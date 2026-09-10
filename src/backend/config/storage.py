@@ -34,28 +34,44 @@ def save_config(config: ExperimentConfig):
         f.write(cfg)
 
 
-def save_checkpoint(config: ExperimentConfig, model):
+def checkpoint_path(config: ExperimentConfig) -> Path:
     base_path = config.abs_model_path
-    checkpoint_path = base_path.with_name(base_path.stem + "_last.zip")
-    checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+    return base_path.with_name(base_path.stem + "_last.zip")
 
-    model.save(checkpoint_path)
+
+def replay_buffer_path(config: ExperimentConfig) -> Path:
+    base_path = config.abs_model_path
+    return base_path.with_name(base_path.stem + "_replay_buffer.pkl")
+
+
+def save_checkpoint(config: ExperimentConfig, model, train_start_timesteps: int = 0):
+    path = checkpoint_path(config)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    model.save(path)
 
     vecnorm = model.get_vec_normalize_env()
     if vecnorm is not None:
-        vecnorm.save(str(checkpoint_path).replace(".zip", ".pkl"))
+        vecnorm.save(str(path).replace(".zip", ".pkl"))
+
+    config.config["last_timesteps"] = train_start_timesteps + int(model.num_timesteps)
+    save_config(config)
 
     if not config.config.get("save_replay_buffer", True):
         return
     if not hasattr(model, "save_replay_buffer"):
         return
 
-    model.save_replay_buffer(base_path.with_name(base_path.stem + "_replay_buffer.pkl"))
+    buffer_path = replay_buffer_path(config)
+    tmp_path = buffer_path.with_name(buffer_path.stem + ".tmp")
+    model.save_replay_buffer(tmp_path)
+    tmp_path.replace(buffer_path)
 
 
 def as_new_run(config: ExperimentConfig) -> ExperimentConfig:
     cfg = copy.deepcopy(config.config)
     cfg.pop("current_timesteps", None)
+    cfg.pop("last_timesteps", None)
     cfg.pop("best_reward", None)
     cfg["model_path"] = make_model_path(
         cfg["env_param"]["env_id"], cfg["algorithm"], cfg["model_param"]["policy"]

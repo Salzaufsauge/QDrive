@@ -16,7 +16,7 @@ class MilestoneCallback(BaseCallback):
         self.eval_env = eval_env
         self.milestones = sorted([int(milestone) for milestone in milestones])
         self.current_milestone = self.milestones.pop(0) if self.milestones else None
-        self.train_start_timesteps = trainer.config.config.get("current_timesteps", 0)
+        self.train_start_timesteps = trainer.train_start_timesteps
         self.n_eval_episodes = n_eval_episodes
 
     def _on_step(self) -> bool:
@@ -74,8 +74,11 @@ class MilestoneCallback(BaseCallback):
                     f"Milestone {self.current_milestone} done | reward={mean_reward:.2f}",
                 )
 
+                self.trainer.config.milestones = self.milestones
                 log("INFO", "Saving checkpoint....")
-                save_checkpoint(self.trainer.config, self.model)
+                save_checkpoint(
+                    self.trainer.config, self.model, self.train_start_timesteps
+                )
                 log("INFO", f"Checkpoint saved | step={self.current_milestone}")
 
             except Exception as e:

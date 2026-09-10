@@ -9,7 +9,12 @@ from wandb.integration.sb3 import WandbCallback
 import wandb
 from backend.callbacks import MilestoneCallback, StreamingCallback
 from backend.config.config import ExperimentConfig
-from backend.config.storage import save_checkpoint, save_config
+from backend.config.storage import (
+    checkpoint_path,
+    replay_buffer_path,
+    save_checkpoint,
+    save_config,
+)
 from backend.env.env_manager import EnvMode, build_env
 from backend.env.tmrl_env import TMRL_ENV_ID
 from backend.state.train_state import TrainState
@@ -27,6 +32,7 @@ class Train:
         self.state = None
         self.run = None
         self.pending_best_model = None
+        self.train_start_timesteps = 0
 
     def train(self, config: ExperimentConfig):
         self.running.set()
@@ -34,9 +40,12 @@ class Train:
         self.config = copy.deepcopy(config)
         save_config(self.config)
 
-        train_start_timesteps = int(config.config.get("current_timesteps", 0))
-        replay_buffer_path = config.abs_model_path.with_name(
-            config.abs_model_path.stem + "_replay_buffer.pkl"
+        checkpoint = checkpoint_path(config)
+        resume_from_checkpoint = checkpoint.exists()
+        self.train_start_timesteps = int(
+            config.config.get("last_timesteps", 0)
+            if resume_from_checkpoint
+            else config.config.get("current_timesteps", 0)
         )
 
         log("INFO", "Starting training")
@@ -61,19 +70,33 @@ class Train:
 
             model_param = config.model_params
             model_class = self.algorithms.get(config.algorithm)
-            if config.abs_model_path.exists():
-                model = model_class.load(env=env, path=config.abs_model_path)
+            resume_path = (
+                checkpoint if resume_from_checkpoint else config.abs_model_path
+            )
+
+            if resume_path.exists():
+                model = model_class.load(env=env, path=resume_path)
+                log("INFO", f"Resuming from {resume_path.name}")
+                if model.seed is not None:
+                    model.set_random_seed(model.seed + self.train_start_timesteps)
+
                 load_vecnorm_stats(
-                    str(config.abs_model_path).replace(".zip", ".pkl"),
+                    str(resume_path).replace(".zip", ".pkl"),
                     env,
                 )
-                if hasattr(model, "load_replay_buffer") and replay_buffer_path.exists():
-                    model.load_replay_buffer(replay_buffer_path)
+                buffer_path = replay_buffer_path(config)
+                if (
+                    resume_from_checkpoint
+                    and hasattr(model, "load_replay_buffer")
+                    and buffer_path.exists()
+                ):
+                    model.load_replay_buffer(buffer_path)
                     model.learning_starts = 0
                     log(
                         "INFO",
-                        f"Replay buffer loaded with {model.replay_buffer.size()} trnasitions",
+                        f"Replay buffer loaded: {model.replay_buffer.size()} transitions",
                     )
+
             else:
                 model_override = {"env": env}
                 if "action_noise" in model_param:
@@ -101,7 +124,7 @@ class Train:
             model_logger.output_formats.append(
                 WandbOutputFormat(
                     self.run,
-                    step_offset=train_start_timesteps,
+                    step_offset=self.train_start_timesteps,
                 )
             )
 
@@ -142,13 +165,13 @@ class Train:
             )
 
             log("INFO", "Training finished")
-            save_checkpoint(self.config, model)
+            save_checkpoint(self.config, model, self.train_start_timesteps)
             log("INFO", "Checkpoint saved")
 
             record_pending_best_model(
                 self,
                 eval_env,
-                history_step=train_start_timesteps
+                history_step=self.train_start_timesteps
                 + int(model.num_timesteps)
                 + 1,  # +1 in case of last milestone == total_timesteps
             )
@@ -162,10 +185,8 @@ class Train:
             )
             self.run.log_artifact(artifact)
 
-            vecnorm = model.get_vec_normalize_env()
-            if vecnorm is not None:
-                vecnorm_path = str(config.abs_model_path).replace(".zip", ".pkl")
-                vecnorm.save(vecnorm_path)
+            vecnorm_path = config.abs_model_path.with_suffix(".pkl")
+            if vecnorm_path.exists():
                 self.run.log_model(vecnorm_path)
 
             self.run.log_model(config.abs_model_path)
