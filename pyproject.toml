@@ -13,7 +13,7 @@ dependencies = [
     "pyyaml>=6.0.3",
     "polars==1.44.2",
     "pyarrow==25.0.1",
-    "wandb==0.30.0",
+    "wandb==0.28.2",
     "nicegui==3.16.0",
     "pywebview==6.2.1",
     "plotly==7.0.0",
