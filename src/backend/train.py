@@ -1,4 +1,5 @@
 import copy
+import os
 import threading
 import traceback
 
@@ -9,7 +10,9 @@ from wandb.integration.sb3 import WandbCallback
 import wandb
 from backend.callbacks import MilestoneCallback, StreamingCallback
 from backend.config.config import ExperimentConfig
+from backend.config.storage import save_config
 from backend.env.env_manager import EnvMode, build_env
+from backend.env.tmrl_env import TMRL_ENV_ID
 from backend.state.train_state import TrainState
 from util.inspection_helper import load_algorithms
 from util.utils import build_action_noise, get_project_root, load_vecnorm_stats, log
@@ -30,7 +33,12 @@ class Train:
         self.running.set()
         self.state = TrainState()
         self.config = copy.deepcopy(config)
+        save_config(self.config)
+
         train_start_timesteps = int(config.config.get("current_timesteps", 0))
+        replay_buffer_path = config.abs_model_path.with_name(
+            config.abs_model_path.stem + "_replay_buffer.pkl"
+        )
 
         log("INFO", "Starting training")
         log("INFO", f"Training config: {config.config}")
@@ -46,7 +54,11 @@ class Train:
 
         try:
             env = build_env(config, EnvMode.TRAIN)
-            eval_env = build_env(config, EnvMode.EVAL)
+            eval_env = (
+                env
+                if config.env_params.get("env_id") == TMRL_ENV_ID
+                else build_env(config, EnvMode.EVAL)
+            )
 
             model_param = config.model_params
             model_class = self.algorithms.get(config.algorithm)
@@ -56,16 +68,25 @@ class Train:
                     str(config.abs_model_path).replace(".zip", ".pkl"),
                     env,
                 )
+                if hasattr(model, "load_replay_buffer") and replay_buffer_path.exists():
+                    model.load_replay_buffer(replay_buffer_path)
+                    model.learning_starts = 0
+                    log(
+                        "INFO",
+                        f"Replay buffer loaded with {model.replay_buffer.size()} trnasitions",
+                    )
             else:
                 model_override = {"env": env}
                 if "action_noise" in model_param:
-                    model_override["action_noise"] = build_action_noise(model_param["action_noise"], env)
+                    model_override["action_noise"] = build_action_noise(
+                        model_param["action_noise"], env
+                    )
 
                 model = model_class(**(model_param | model_override))
 
             self.run = wandb.init(
-                project="QDrive",
-                entity="QDrive",
+                project=os.getenv("WANDB_PROJECT", None),
+                entity=os.getenv("WANDB_ENTITY", None),
                 config=config.config,
                 name=run_name,
                 dir=get_project_root(),
@@ -88,7 +109,7 @@ class Train:
             streaming_callback = StreamingCallback(
                 self,
                 self.state,
-                eval_env,
+                env if config.env_params["env_id"] == "tmrl" else eval_env,
                 eval_freq=max(
                     config.callback_params["eval_freq"]
                     // config.env_params.get("n_envs"),
@@ -100,7 +121,7 @@ class Train:
             milestone_callback = (
                 MilestoneCallback(
                     self,
-                    eval_env,
+                    env if config.env_params["env_id"] == "tmrl" else eval_env,
                     config.milestones,
                     n_eval_episodes=config.callback_params["n_eval_episodes"],
                 )
@@ -122,10 +143,15 @@ class Train:
             )
 
             log("INFO", "Training finished")
+            if hasattr(model, "save_replay_buffer") and config.config.get(
+                "save_replay_buffer", True
+            ):
+                model.save_replay_buffer(replay_buffer_path)
+                log("INFO", f"Replay buffer saved to {replay_buffer_path}")
 
             record_pending_best_model(
                 self,
-                eval_env,
+                env if config.env_params["env_id"] == "tmrl" else eval_env,
                 history_step=train_start_timesteps
                 + int(model.num_timesteps)
                 + 1,  # +1 in case of last milestone == total_timesteps
@@ -158,7 +184,7 @@ class Train:
                     failure += traceback.format_exc()
             log("ERROR", f"Training failed: {failure}")
         finally:
-            if env is not None:
+            if env is not None and eval_env is not env:
                 try:
                     env.close()
                 except Exception:

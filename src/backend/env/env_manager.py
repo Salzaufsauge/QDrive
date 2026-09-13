@@ -7,6 +7,7 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import DummyVecEnv, VecEnv, VecEnvWrapper
 
 from backend.config.config import ExperimentConfig
+from backend.env.tmrl_env import TMRL_ENV_ID
 from util.inspection_helper import load_env_wrappers
 from util.utils import get_vec_env_class, load_overrides, log
 
@@ -24,11 +25,15 @@ def build_env(config: ExperimentConfig, mode: EnvMode) -> VecEnv:
 
     gym_wrappers, vec_env_wrappers = build_wrapper(wrapper_config, mode)
 
+    only_single_instance_tmrl = env_config.get("env_id") == TMRL_ENV_ID
+
     env_override = {
         "vec_env_cls": get_vec_env_class(env_config["vec_env_cls"])
-        if mode == EnvMode.TRAIN
+        if mode == EnvMode.TRAIN and not only_single_instance_tmrl
         else DummyVecEnv,
-        "n_envs": env_config["n_envs"] if mode == EnvMode.TRAIN else 1,
+        "n_envs": env_config["n_envs"]
+        if mode == EnvMode.TRAIN and not only_single_instance_tmrl
+        else 1,
         "wrapper_class": compose_gym_wrappers(gym_wrappers) if gym_wrappers else None,
     }
     env = make_vec_env(**(env_config | env_override))

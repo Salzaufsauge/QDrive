@@ -47,6 +47,7 @@ def get_vec_env_class(cls):
             return SubprocVecEnv
     return None
 
+
 def build_action_noise(spec: dict, env):
     spec = dict(spec or {})
     noise_type = spec.pop("type", None)
@@ -91,6 +92,11 @@ def get_config_path(model_path):
     conf_path = conf_path.with_suffix(".yaml")
 
     return conf_path
+
+
+def make_model_path(env_id, algorithm, policy):
+    timestamp = datetime.datetime.now(tz=datetime.UTC).strftime("%Y-%m-%d_%H-%M")
+    return f"models/{env_id}/{algorithm}/model-{policy}-{timestamp}.zip"
 
 
 def build_ui_params(params: list, elem_per_row: int, action):

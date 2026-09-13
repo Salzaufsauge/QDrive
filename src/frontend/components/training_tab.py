@@ -183,7 +183,7 @@ class TrainingTab:
 
     def train(self):
         self.setup_config(
-            *[self.config_loader.config],
+            *[self.config_loader.config, self.config_loader.new_run],
             *self.env_tab.env_params,
             *self.wrapper_tab.wrapper_params,
             *self.model_tab.model_params,

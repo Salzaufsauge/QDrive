@@ -9,6 +9,7 @@ class ConfigLoader:
         self.load_btn = None
         self.config = None
         self.config_path = config_path
+        self.new_run = None
 
         self.timer = None
 
@@ -44,6 +45,9 @@ class ConfigLoader:
 
             with ui.column().classes("flex-grow"):
                 self.load_btn = ui.button("Load Config").classes("flex-grow w-full")
+                self.new_run = ui.checkbox("Start as new Run").classes(
+                    "flex-grow w-full"
+                )
 
                 self.load_label = ui.label("Config Loaded").classes("flex-grow w-full")
 

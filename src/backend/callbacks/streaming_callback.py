@@ -42,6 +42,8 @@ class StreamingCallback(BaseCallback):
                 deterministic=self.deterministic,
                 render=False,
             )
+            if self.eval_env is self.training_env:
+                self.model._last_obs = self.eval_env.reset()
 
             mean_reward = float(mean_reward)  # fix YAML dumping issue
             std_reward = float(std_reward)

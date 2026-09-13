@@ -126,7 +126,8 @@ def make_ui_for_param(param, value=None, visible=True):
         ann = unwrap_optional(ann)
 
         if any(
-            typing.get_origin(a) is collections.abc.Callable or a is typing.Callable
+            typing.get_origin(a) is collections.abc.Callable
+            or a in (collections.abc.Callable, typing.Callable)
             for a in args
         ):
             elem = ui.input(label=param.name, value=str(val) if val is not None else "")

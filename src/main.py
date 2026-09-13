@@ -4,6 +4,8 @@ import signal
 import sys
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 from backend.config.storage import load_config
 from backend.controller import Controller
 from frontend import Editor
@@ -24,6 +26,8 @@ def interrupt_handler(controller):
 
 
 def main(args):
+    load_dotenv()
+
     if args.config_path is not None:
         config_path = Path(args.config_path)
         configuration = load_config(config_path)

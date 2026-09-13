@@ -46,7 +46,6 @@ def make_model_ui(param: inspect.Parameter, algorithms, algo):
         select.noise_theta = theta
         return select
 
-
     if param.name in ("env", "tensorboard_log"):
         elem = ui.label("")
         elem.set_visibility(False)
@@ -104,6 +103,9 @@ class ModelTab:
 
         self.model_params.append(
             ui.number(label="total_timesteps", value=1000000).classes("w-full")
+        )
+        self.model_params.append(
+            ui.checkbox(text="save_replay_buffer", value=True).classes("w-full")
         )
 
         with (

@@ -34,7 +34,8 @@ def record_and_upload_video(
         obs, _rewards, dones, _info = rec_env.step(action)
         episode_starts = dones
         rec_env.render()
-    rec_env.close()
+    if rec_env.recording:
+        rec_env._stop_recording()
 
     video = wandb.Video(rec_env.video_path, caption=caption, format="mp4")
     trainer.run.log({"video_step": video_step}, step=history_step, commit=False)
@@ -58,13 +59,17 @@ def record_pending_best_model(trainer, eval_env, history_step=None):
         / trainer.config.model_path.replace("models", "experiments").replace(".zip", "")
         / "best"
     )
-    record_and_upload_video(
-        trainer,
-        best_model,
-        eval_env,
-        video_path,
-        caption=f"best model so far, reward={pending['reward']:.2f}",
-        step=pending["timesteps"],
-        history_step=history_step,
-    )
+    try:
+        record_and_upload_video(
+            trainer,
+            best_model,
+            eval_env,
+            video_path,
+            caption=f"best model so far, reward={pending['reward']:.2f}",
+            step=pending["timesteps"],
+            history_step=history_step,
+        )
+    except Exception as e:
+        log("ERROR", f"Failed to record video of the best Model: {e}")
+
     trainer.pending_best_model = None
