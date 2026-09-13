@@ -3,8 +3,12 @@ from gymnasium import ObservationWrapper, spaces
 
 
 class TMRLFullObsWrapper(ObservationWrapper):
-    def __init__(self, env, longitudinal_axis: bool = False):
+    def __init__(
+        self, env, use_only_images: bool = False, longitudinal_axis: bool = False
+    ):
         super().__init__(env)
+
+        self.use_only_images = use_only_images
 
         raw_space = env.observation_space
         if not isinstance(raw_space, spaces.Tuple):
@@ -15,14 +19,19 @@ class TMRLFullObsWrapper(ObservationWrapper):
         raw_space = raw_space.spaces
 
         action_dim = sum(int(space.shape[0]) for space in raw_space[4:])
+
+        image_history = spaces.Box(
+            low=0, high=255, shape=raw_space[3].shape, dtype=np.uint8
+        )
+
+        if self.use_only_images:
+            self.observation_space = image_history
         self.observation_space = spaces.Dict(
             {
                 "speed": raw_space[0],
                 "gear": raw_space[1],
                 "rpm": raw_space[2],
-                "image_history": spaces.Box(
-                    low=0, high=255, shape=raw_space[3].shape, dtype=np.uint8
-                ),
+                "image_history": image_history,
                 "action_history": spaces.Box(
                     low=-1, high=1, shape=(action_dim,), dtype=np.float32
                 ),
@@ -53,8 +62,11 @@ class TMRLFullObsWrapper(ObservationWrapper):
         image_history = np.asarray(image_history, dtype=np.uint8)
         self.last_frame = image_history[-1]
 
+        if self.use_only_images:
+            return image_history
+
         return {
-            "image_history": np.asarray(image_history, dtype=np.uint8),
+            "image_history": image_history,
             "speed": speed,
             "gear": gear,
             "rpm": rpm,
@@ -70,7 +82,7 @@ class TMRLFullObsWrapper(ObservationWrapper):
     def step(self, action):
         return super().step(self.map_action(action))
 
-    def render(self):  # mode="human" mit Leon abklären
+    def render(self):
         if self.last_frame is None:
             return None
         frame = np.repeat(self.last_frame[:, :, np.newaxis], 3, axis=2)

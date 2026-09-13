@@ -1,4 +1,5 @@
 import copy
+import os
 import threading
 import traceback
 
@@ -107,8 +108,8 @@ class Train:
                 model = model_class(**(model_param | model_override))
 
             self.run = wandb.init(
-                project="QDrive",
-                entity="QDrive",
+                project=os.getenv("WANDB_PROJECT", None),
+                entity=os.getenv("WANDB_ENTITY", None),
                 config=config.config,
                 name=run_name,
                 dir=get_project_root(),
@@ -131,7 +132,7 @@ class Train:
             streaming_callback = StreamingCallback(
                 self,
                 self.state,
-                eval_env,
+                env if config.env_params["env_id"] == "tmrl" else eval_env,
                 eval_freq=max(
                     config.callback_params["eval_freq"]
                     // config.env_params.get("n_envs"),
@@ -143,7 +144,7 @@ class Train:
             milestone_callback = (
                 MilestoneCallback(
                     self,
-                    eval_env,
+                    env if config.env_params["env_id"] == "tmrl" else eval_env,
                     config.milestones,
                     n_eval_episodes=config.callback_params["n_eval_episodes"],
                 )
