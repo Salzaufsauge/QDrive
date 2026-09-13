@@ -6,39 +6,6 @@ class TMRLFullObsWrapper(ObservationWrapper):
     def __init__(
         self, env, use_only_images: bool = False, longitudinal_axis: bool = False
     ):
-        """
-        Initializes the observation and action spaces for a custom environment wrapper that processes
-        sensor data, images, and other vehicle-related observations. Configures metadata for rendering
-        and adjusts the action space if the longitudinal axis control is enabled.
-
-        :param env: The environment being wrapped. It should have an `observation_space` of type
-                    `gym.spaces.Tuple` and support the expected structure for sensor and image-based
-                    data.
-        :type env: gym.Env
-        :param use_only_images: If True, the observation space will be reduced to only image-related
-                                data (`image_history` property of the wrapped environment). Default
-                                is False.
-        :type use_only_images: bool
-        :param longitudinal_axis: Whether to enable simplified control along the longitudinal axis.
-                                  This modifies the action space to a 2-dimensional box. Default is False.
-        :type longitudinal_axis: bool
-
-        :raises TypeError: Raises an error if the provided environment's observation space is not
-                           of type `gym.spaces.Tuple`.
-
-        :attribute observation_space: Defines the structure of the processed observations returned by
-                                      the wrapper. Contains elements such as `speed`, `gear`, `rpm`,
-                                      `image_history`, and `action_history`.
-        :type observation_space: gym.spaces.Dict | gym.spaces.Box
-        :attribute action_space: Specifies the action space for the wrapped environment. If
-                                 `longitudinal_axis` is enabled, it contains a 2-dimensional box
-                                 space. By default, it is inherited from the environment.
-        :type action_space: gym.spaces.Box
-        :attribute metadata: A dictionary containing metadata for the environment, including
-                             rendering modes and the calculated rendering FPS based on the parent
-                             environment's time step duration.
-        :type metadata: dict
-        """
         super().__init__(env)
 
         self.use_only_images = use_only_images
