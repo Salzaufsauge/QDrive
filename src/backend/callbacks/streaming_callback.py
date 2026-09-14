@@ -21,10 +21,7 @@ class StreamingCallback(BaseCallback):
         self.trainer = trainer
         self.state = state
         self.best_reward = trainer.config.best_reward
-        self.last_timesteps = 0
-        self.train_start_timesteps = int(
-            trainer.config.config.get("current_timesteps", 0)
-        )
+        self.train_start_timesteps = trainer.train_start_timesteps
         self.eval_env = eval_env
         self.eval_freq = eval_freq
         self.n_eval_episodes = n_eval_episodes
@@ -68,11 +65,8 @@ class StreamingCallback(BaseCallback):
                 self.best_reward = mean_reward
                 self.trainer.config.best_reward = mean_reward
                 self.trainer.config.current_timesteps = (
-                    self.num_timesteps
-                    - self.last_timesteps
-                    + self.trainer.config.config.get("current_timesteps", 0)
+                    self.train_start_timesteps + self.num_timesteps
                 )
-                self.last_timesteps = self.num_timesteps
                 save_model(self.trainer.config, self.model)
                 save_config(self.trainer.config)
 

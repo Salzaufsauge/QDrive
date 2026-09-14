@@ -1,6 +1,7 @@
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.evaluation import evaluate_policy
 
+from backend.config.storage import save_checkpoint
 from util.utils import copy_vecnorm, get_project_root, log
 from util.video import record_and_upload_video
 from util.wandb_logging import log_wandb_metrics
@@ -15,7 +16,7 @@ class MilestoneCallback(BaseCallback):
         self.eval_env = eval_env
         self.milestones = sorted([int(milestone) for milestone in milestones])
         self.current_milestone = self.milestones.pop(0) if self.milestones else None
-        self.train_start_timesteps = trainer.config.config.get("current_timesteps", 0)
+        self.train_start_timesteps = trainer.train_start_timesteps
         self.n_eval_episodes = n_eval_episodes
 
     def _on_step(self) -> bool:
@@ -72,6 +73,13 @@ class MilestoneCallback(BaseCallback):
                     "INFO",
                     f"Milestone {self.current_milestone} done | reward={mean_reward:.2f}",
                 )
+
+                self.trainer.config.milestones = self.milestones
+                log("INFO", "Saving checkpoint....")
+                save_checkpoint(
+                    self.trainer.config, self.model, self.train_start_timesteps
+                )
+                log("INFO", f"Checkpoint saved | step={self.current_milestone}")
 
             except Exception as e:
                 log("ERROR", f"Milestone evaluation failed: {e}")

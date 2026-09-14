@@ -1,5 +1,6 @@
 import importlib.util
 import os
+import warnings
 
 import gymnasium
 
@@ -15,6 +16,8 @@ def make_tmrl_env():
         os.environ.pop("WANDB_API_KEY", None)
     else:
         os.environ["WANDB_API_KEY"] = wandb_key
+
+    warnings.filterwarnings("once", message="Time-step timed out")
 
     return get_environment()
 
