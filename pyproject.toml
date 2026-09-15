@@ -32,11 +32,6 @@ trackmania = [
     "tmrl==0.7.1",
 ]
 
-[project.optional-dependencies]
-trackmania = [
-    "tmrl==0.7.0",
-]
-
 [build-system]
 requires = ["setuptools", "swig"]
 build-backend = "setuptools.build_meta"
