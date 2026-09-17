@@ -132,7 +132,7 @@ class Train:
             streaming_callback = StreamingCallback(
                 self,
                 self.state,
-                env if config.env_params["env_id"] == "tmrl" else eval_env,
+                env if config.env_params["env_id"] == TMRL_ENV_ID else eval_env,
                 eval_freq=max(
                     config.callback_params["eval_freq"]
                     // config.env_params.get("n_envs"),
@@ -144,7 +144,7 @@ class Train:
             milestone_callback = (
                 MilestoneCallback(
                     self,
-                    env if config.env_params["env_id"] == "tmrl" else eval_env,
+                    env if config.env_params["env_id"] == TMRL_ENV_ID else eval_env,
                     config.milestones,
                     n_eval_episodes=config.callback_params["n_eval_episodes"],
                 )
@@ -178,12 +178,7 @@ class Train:
             )
 
             artifact = wandb.Artifact(f"run-{self.run.id}-config", type="config")
-            artifact.add_file(
-                get_project_root()
-                / config.model_path.replace("models", "experiments").replace(
-                    ".zip", ".yaml"
-                )
-            )
+            artifact.add_file(self.config.abs_config_path)
             self.run.log_artifact(artifact)
 
             vecnorm_path = config.abs_model_path.with_suffix(".pkl")
