@@ -26,17 +26,18 @@ class TMRLFullObsWrapper(ObservationWrapper):
 
         if self.use_only_images:
             self.observation_space = image_history
-        self.observation_space = spaces.Dict(
-            {
-                "speed": raw_space[0],
-                "gear": raw_space[1],
-                "rpm": raw_space[2],
-                "image_history": image_history,
-                "action_history": spaces.Box(
-                    low=-1, high=1, shape=(action_dim,), dtype=np.float32
-                ),
-            }
-        )
+        else:
+            self.observation_space = spaces.Dict(
+                {
+                    "speed": raw_space[0],
+                    "gear": raw_space[1],
+                    "rpm": raw_space[2],
+                    "image_history": image_history,
+                    "action_history": spaces.Box(
+                        low=-1, high=1, shape=(action_dim,), dtype=np.float32
+                    ),
+                }
+            )
 
         self.last_frame = None
         self.metadata = {
