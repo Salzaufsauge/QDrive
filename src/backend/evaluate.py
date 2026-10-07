@@ -16,6 +16,13 @@ class Evaluate:
         self.current_frame = None
 
     def evaluate(self, config: ExperimentConfig, mode: str):
+        """
+        Evaluate a model using a provided configuration.
+        The evaluation will run until the running event is cleared and update the current frame.
+
+        :param config: The configuration to use for evaluation.
+        :param mode: Render mode for the output frame
+        """
         env = None
         try:
             self.running.set()

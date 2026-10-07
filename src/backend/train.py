@@ -36,6 +36,12 @@ class Train:
         self.train_start_timesteps = 0
 
     def train(self, config: ExperimentConfig):
+        """
+        Train a model using a provided configuration.
+        If a model is already present, training will resume from the last checkpoint.
+
+        :param config: Experiment configuration to use for training.
+        """
         self.state = TrainState()
         self.config = copy.deepcopy(config)
 

@@ -45,6 +45,13 @@ def iter_modules(package):
 
 
 def discover_classes(packages, predicate):
+    """
+    Discovers classes in given packages that satisfy the provided predicate.
+
+    :param packages: source packages to search
+    :param predicate: filter to apply
+    :return: dict of discovered classes
+    """
     found = {}
     saved = (
         sys.argv
@@ -67,6 +74,9 @@ def discover_classes(packages, predicate):
 
 @cache
 def load_algorithms():
+    """
+    :return: dict of available algorithms
+    """
     discovery = load_discovery()["algorithms"]
 
     return discover_classes(
@@ -112,6 +122,9 @@ def unwrap_optional(annotation):
 
 @cache
 def load_env_wrappers():
+    """
+    :return: dict of available environment wrappers
+    """
     discovery = load_discovery()["env_wrappers"]
 
     wrappers = discover_classes(
@@ -163,8 +176,16 @@ def validate_ast(node):
             raise ValueError(f"Unsupported expression: {type(child).__name__}")
 
 
-# useful for stuff like lr where a lambda can be passed
 def parse_lambda(s):
+    """
+    Parses a string into a lambda function or a resolved name.
+    The lambda is restricted to a subset of Python syntax to prevent arbitrary code execution.
+
+    Useful for stuff like lr where a lambda can be passed.
+
+    :param s: string to parse
+    :return: lambda function or resolved name
+    """
     if not isinstance(s, str):
         return s
 

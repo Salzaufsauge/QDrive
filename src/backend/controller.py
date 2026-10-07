@@ -14,6 +14,11 @@ class RunType:
 
 
 class Controller:
+    """
+    Controller is the boundary between the frontend and the backend.
+    It manages the training and evaluation processes. Allowing only one run at a time.
+    """
+
     def __init__(self):
         self.training = Train()
         self.eval = Evaluate()

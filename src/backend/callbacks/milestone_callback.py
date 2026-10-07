@@ -8,6 +8,12 @@ from util.wandb_logging import log_wandb_metrics
 
 
 class MilestoneCallback(BaseCallback):
+    """
+    MilestoneCallback is a callback that evaluates the model at specified milestones.
+
+    This includes recording a video of the model's performance and logging metrics to Weights & Biases.
+    """
+
     def __init__(
         self, trainer, eval_env, milestones: list, verbose=0, n_eval_episodes=10
     ):

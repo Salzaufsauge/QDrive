@@ -18,6 +18,15 @@ class EnvMode(Enum):
 
 
 def build_env(config: ExperimentConfig, mode: EnvMode) -> VecEnv:
+    """
+    Builds the environment to be used for training or evaluation.
+    Depending on the mode, some wrappers and parameters will be applied differently to ensure compatibility.
+    This behavior is defined in configs/overrides.yaml
+
+    :param config: The configuration for the environment.
+    :param mode: How the environment will be used.
+    :return: The vectorized environment to be used for training or evaluation.
+    """
     log("INFO", f"Building environment in mode: {mode.value}")
 
     env_config = copy.deepcopy(config.env_params)
@@ -45,6 +54,14 @@ def build_env(config: ExperimentConfig, mode: EnvMode) -> VecEnv:
 
 
 def build_wrapper(wrapper_config: dict, mode: EnvMode):
+    """
+    Creates partial wrappers for the environment based on the provided configuration and mode.
+    Depending on the mode, wrapper parameters may be overridden for specific wrappers.
+
+    :param wrapper_config: Dictionary containing the wrappers to be used and their parameters
+    :param mode: How the environment will be used
+    :return: Tuple of lists containing partial wrappers
+    """
     wrappers = load_env_wrappers()
 
     gym_env_wrappers = []
@@ -67,8 +84,8 @@ def build_wrapper(wrapper_config: dict, mode: EnvMode):
 
 def compose_gym_wrappers(wrappers):
     def wrapper(env):
-        for wrapper in wrappers:
-            env = wrapper(env=env)
+        for env_wrapper in wrappers:
+            env = env_wrapper(env=env)
         return env
 
     return wrapper

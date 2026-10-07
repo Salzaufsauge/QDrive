@@ -3,6 +3,12 @@ from gymnasium import ObservationWrapper, spaces
 
 
 class TMRLFullObsWrapper(ObservationWrapper):
+    """
+    Observational wrapper that converts the observations of TMRL into a space that sb3 can understand.
+
+    It also exposes some metadata so the video recorder and eval tabs can use it.
+    """
+
     def __init__(
         self, env, use_only_images: bool = False, longitudinal_axis: bool = False
     ):

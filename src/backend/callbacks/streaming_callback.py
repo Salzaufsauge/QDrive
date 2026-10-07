@@ -7,6 +7,11 @@ from util.wandb_logging import log_wandb_metrics
 
 
 class StreamingCallback(BaseCallback):
+    """
+    StreamingCallback is a callback that evaluates the model at specified intervals and logs the results.
+    It also records appends episode data to the training state.
+    """
+
     def __init__(
         self,
         trainer,
