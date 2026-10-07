@@ -8,7 +8,7 @@ from backend.controller import Controller
 from frontend.components.eval_tab import EvalTab
 from frontend.components.training_tab import TrainingTab
 from util.logging_broker import LoggingBroker
-from util.utils import frame_to_data_url
+from util.utils import frame_to_data_bytes
 
 black_1px = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAA1JREFUGFdjYGBg+A8AAQQBAHAgZQsAAAAASUVORK5CYII="
 placeholder = Response(
@@ -30,7 +30,7 @@ class Editor:
             frame = self.controller.get_current_frame()
             if frame is None:
                 return placeholder
-            jpeg = await run.cpu_bound(frame_to_data_url, frame)
+            jpeg = await run.cpu_bound(frame_to_data_bytes, frame)
             return Response(jpeg, media_type="image/jpeg")
 
     def build(self):
@@ -52,7 +52,7 @@ class Editor:
                 with ui.tab_panel(eval_tab), ui.card().classes("w-full h-full"):
                     EvalTab(self.controller, self.config_path).build()
 
-    def launch(self):
+    def launch(self, host, port):
         self.register_video_route()
 
         @ui.page("/")
@@ -61,7 +61,8 @@ class Editor:
 
         ui.run(
             title="QDrive Training UI",
-            host="0.0.0.0",
+            host=host,
+            port=port,
             reload=False,
             dark=True,
         )

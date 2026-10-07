@@ -36,10 +36,8 @@ class Train:
         self.train_start_timesteps = 0
 
     def train(self, config: ExperimentConfig):
-        self.running.set()
         self.state = TrainState()
         self.config = copy.deepcopy(config)
-        save_config(self.config)
 
         checkpoint = checkpoint_path(config)
         resume_from_checkpoint = checkpoint.exists()
@@ -62,6 +60,8 @@ class Train:
         eval_env = None
 
         try:
+            self.running.set()
+            save_config(self.config)
             env = build_env(config, EnvMode.TRAIN)
             eval_env = (
                 env
@@ -70,6 +70,8 @@ class Train:
             )
 
             model_param = config.model_params
+            if config.algorithm not in self.algorithms:
+                raise ValueError(f"Algorithm {config.algorithm} not supported")
             model_class = self.algorithms.get(config.algorithm)
             resume_path = (
                 checkpoint if resume_from_checkpoint else config.abs_model_path
@@ -192,21 +194,22 @@ class Train:
             if self.run is not None:
                 try:
                     self.run.finish(1)
-                except Exception:
+                except Exception:  # noqa: BLE001
                     failure += "\nWandb failed to finish run:"
                     failure += traceback.format_exc()
             log("ERROR", f"Training failed: {failure}")
+            raise
         finally:
             if env is not None and eval_env is not env:
                 try:
                     env.close()
-                except Exception:
-                    log("ERROR", "Failed to close training environment")
+                except Exception as e:  # noqa: BLE001
+                    log("ERROR", f"Failed to close training environment: {e}")
             if eval_env is not None:
                 try:
                     eval_env.close()
-                except Exception:
-                    log("ERROR", "Failed to close evaluation environment")
+                except Exception as e:  # noqa: BLE001
+                    log("ERROR", f"Failed to close evaluation environment: {e}")
             self.state = None
             self.config = None
             self.run = None

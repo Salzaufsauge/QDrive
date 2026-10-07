@@ -3,7 +3,7 @@ algorithms:
   - sb3_contrib
 env_wrappers:
   - gymnasium
-  - rl_zoo3
+  - rl_zoo3.wrappers
   - stable_baselines3
   - sb3_contrib
   - backend.env

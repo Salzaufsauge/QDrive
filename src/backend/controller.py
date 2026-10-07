@@ -44,7 +44,7 @@ class Controller:
         try:
             target = self.training if self.run_type == RunType.TRAIN else self.eval
             await self._stop_thread(target)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             print(e, file=sys.stderr)
 
     def start_eval(self, config: ExperimentConfig, mode: str = "rgb_array"):
@@ -67,8 +67,8 @@ class Controller:
         self.run_type = RunType.TRAIN if target == self.training.train else RunType.EVAL
         self.config = args[0]
         self.thread = threading.Thread(target=target, args=args, daemon=True)
-        self.thread.start()
         self.run_id = uuid.uuid4()
+        self.thread.start()
 
     async def _stop_thread(self, target):
         thread = self.thread

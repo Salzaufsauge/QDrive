@@ -1,0 +1,46 @@
+env_param:
+  env_id: CartPole-v1
+  n_envs: 1
+  start_index: 0
+  wrapper_class: null
+  env_kwargs: { }
+  vec_env_cls: DummyVecEnv
+  vec_env_kwargs: { }
+  monitor_kwargs: { }
+  wrapper_kwargs: { }
+env_wrappers: { }
+model_param:
+  policy: MlpPolicy
+  env: null
+  learning_rate: 0.0003
+  n_steps: 2048
+  batch_size: 64
+  n_epochs: 10
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  clip_range_vf: null
+  normalize_advantage: true
+  ent_coef: 0.0
+  vf_coef: 0.5
+  max_grad_norm: 0.5
+  use_sde: false
+  sde_sample_freq: -1
+  rollout_buffer_class: null
+  rollout_buffer_kwargs: { }
+  stats_window_size: 100
+  tensorboard_log: null
+  policy_kwargs: { }
+  verbose: 1
+  device: cpu
+  _init_setup_model: true
+algorithm: PPO
+milestones:
+  - '3000'
+total_timesteps: 10000
+save_replay_buffer: true
+callback_params:
+  eval_freq: 5000
+  n_eval_episodes: 10
+  deterministic: true
+model_path: models/CartPole-v1/PPO/example.zip

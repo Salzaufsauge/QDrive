@@ -81,7 +81,7 @@ class MilestoneCallback(BaseCallback):
                 )
                 log("INFO", f"Checkpoint saved | step={self.current_milestone}")
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 log("ERROR", f"Milestone evaluation failed: {e}")
 
             finally:

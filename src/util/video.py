@@ -69,7 +69,7 @@ def record_pending_best_model(trainer, eval_env, history_step=None):
             step=pending["timesteps"],
             history_step=history_step,
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         log("ERROR", f"Failed to record video of the best Model: {e}")
 
     trainer.pending_best_model = None

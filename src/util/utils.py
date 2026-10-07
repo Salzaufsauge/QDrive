@@ -9,7 +9,6 @@ import cv2
 import gymnasium as gym
 import numpy as np
 import yaml
-from nicegui import ui
 from stable_baselines3.common import noise
 from stable_baselines3.common.vec_env import (
     DummyVecEnv,
@@ -99,17 +98,6 @@ def make_model_path(env_id, algorithm, policy):
     return f"models/{env_id}/{algorithm}/model-{policy}-{timestamp}.zip"
 
 
-def build_ui_params(params: list, elem_per_row: int, action):
-    temp = []
-
-    for i in range(0, len(params), elem_per_row):
-        with ui.row().classes("w-full"):
-            for param in params[i : i + elem_per_row]:
-                temp.append(action(param=param))
-
-    return temp
-
-
 def copy_vecnorm(model, target_env):
     src = model if isinstance(model, VecNormalize) else model.get_vec_normalize_env()
     dst = unwrap_vec_normalize(target_env)
@@ -132,7 +120,7 @@ def load_vecnorm_stats(vecnorm_path, target_env):
     copy_vecnorm(loaded, target_env)
 
 
-def frame_to_data_url(frame):
+def frame_to_data_bytes(frame):
     _, imencode_image = cv2.imencode(".jpg", frame)
     return imencode_image.tobytes()
 
