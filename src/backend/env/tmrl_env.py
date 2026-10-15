@@ -1,5 +1,4 @@
 import importlib.util
-import os
 import warnings
 
 import gymnasium
@@ -8,14 +7,7 @@ TMRL_ENV_ID = "TrackmaniaTMRL-v0"
 
 
 def make_tmrl_env():
-    wandb_key = os.environ.get("WANDB_API_KEY")
-
     from tmrl import get_environment
-
-    if wandb_key is None:
-        os.environ.pop("WANDB_API_KEY", None)
-    else:
-        os.environ["WANDB_API_KEY"] = wandb_key
 
     warnings.filterwarnings("once", message="Time-step timed out")
 

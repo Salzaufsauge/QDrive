@@ -16,23 +16,31 @@ class Evaluate:
         self.current_frame = None
 
     def evaluate(self, config: ExperimentConfig, mode: str):
-        self.running.set()
+        """
+        Evaluate a model using a provided configuration.
+        The evaluation will run until the running event is cleared and update the current frame.
 
-        env = build_env(config, EnvMode.EVAL)
-
-        model = self.algorithms.get(config.algorithm).load(
-            config.abs_model_path, env=env
-        )
-        load_vecnorm_stats(
-            str(config.abs_model_path).replace(".zip", ".pkl"),
-            env,
-        )
-        obs = env.reset()
-
-        lstm_states = None
-        episode_starts = np.ones((env.num_envs,), dtype=bool)
-
+        :param config: The configuration to use for evaluation.
+        :param mode: Render mode for the output frame
+        """
+        env = None
         try:
+            self.running.set()
+
+            env = build_env(config, EnvMode.EVAL)
+
+            model = self.algorithms.get(config.algorithm).load(
+                config.abs_model_path, env=env
+            )
+            load_vecnorm_stats(
+                str(config.abs_model_path).replace(".zip", ".pkl"),
+                env,
+            )
+            obs = env.reset()
+
+            lstm_states = None
+            episode_starts = np.ones((env.num_envs,), dtype=bool)
+
             while self.running.is_set():
                 action, lstm_states = model.predict(
                     obs,
@@ -51,7 +59,8 @@ class Evaluate:
                     obs = env.reset()
         finally:
             self.running.clear()
-            env.close()
+            if env is not None:
+                env.close()
 
     def stop(self):
         self.running.clear()

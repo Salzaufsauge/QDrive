@@ -17,6 +17,9 @@ def load_config(config_path: Path):
 
 
 def save_model(config: ExperimentConfig, model):
+    """
+    Wrapper for the normal sb3 save fn. It also saves the vecnorm if it exists.
+    """
     model_path = config.abs_model_path
     vecnorm = model.get_vec_normalize_env()
     model_path.parent.mkdir(parents=True, exist_ok=True)
@@ -45,6 +48,9 @@ def replay_buffer_path(config: ExperimentConfig) -> Path:
 
 
 def save_checkpoint(config: ExperimentConfig, model, train_start_timesteps: int = 0):
+    """
+    Saves the model checkpoint and associated files such as replay buffer, config, and vecnorm.pkl if applicable.
+    """
     path = checkpoint_path(config)
     path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -69,6 +75,9 @@ def save_checkpoint(config: ExperimentConfig, model, train_start_timesteps: int 
 
 
 def as_new_run(config: ExperimentConfig) -> ExperimentConfig:
+    """
+    Recreates a config so a run can be restarted without manually recreating it.
+    """
     cfg = copy.deepcopy(config.config)
     cfg.pop("current_timesteps", None)
     cfg.pop("last_timesteps", None)

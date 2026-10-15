@@ -5,8 +5,8 @@ from collections.abc import Callable
 
 from nicegui import ui
 
-from util.inspection_helper import load_env_wrappers, make_ui_for_param
-from util.utils import build_ui_params
+from frontend.uituils import build_ui_params, make_ui_for_param, unwrap_ui_elem
+from util.inspection_helper import load_env_wrappers
 
 _dragged: Draggable | None = None
 
@@ -62,17 +62,12 @@ class WrapperTab:
         self.parent_filter.set_options(self.get_available_parents())
         self.module_filter.set_options(self.available_modules())
 
-    @property
-    def wrapper_params(self):
-        result = []
-
-        for item in self.wrapper_items:
-            result.append(item["checkbox"])
-
-            if item["active"]:
-                result.extend(item["params"])
-
-        return result
+    def values(self):
+        return {
+            item["name"]: {n: unwrap_ui_elem(e) for n, e in item["params"].items()}
+            for item in self.wrapper_items
+            if item["active"]
+        }
 
     def add_wrapper(self, wrapper_name, wrapper_cls):
         item = {

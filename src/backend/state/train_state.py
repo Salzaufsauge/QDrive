@@ -3,6 +3,12 @@ from collections import deque
 
 
 class TrainState:
+    """
+    TrainState is mainly used to store training episode data.
+
+    It retains a deque of episodes with a maximum length of 500. Each episode is a dictionary containing training data.
+    """
+
     def __init__(self):
         self.episodes = deque(maxlen=500)
         self.sequence = 0

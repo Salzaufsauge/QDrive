@@ -3,8 +3,8 @@ import inspect
 from nicegui import ui
 from stable_baselines3.common.env_util import make_vec_env
 
-from util.inspection_helper import make_ui_for_param
-from util.utils import build_ui_params, get_envs
+from frontend.uituils import build_ui_params, make_ui_for_param, unwrap_ui_elem
+from util.utils import get_envs
 
 
 def make_env_ui(param: inspect.Parameter):
@@ -28,12 +28,12 @@ def make_env_ui(param: inspect.Parameter):
 
 class EnvTab:
     def __init__(self):
-        self.env_params = []
+        self.env_params = {}
 
     def build(self):
         params = list(inspect.signature(make_vec_env).parameters.values())
 
-        self.env_params.extend(build_ui_params(params, 4, make_env_ui))
+        self.env_params = build_ui_params(params, 4, make_env_ui)
 
-    def get_env_params(self):
-        return self.env_params
+    def values(self):
+        return {name: unwrap_ui_elem(e) for name, e in self.env_params.items()}

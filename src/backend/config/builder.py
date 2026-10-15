@@ -1,11 +1,9 @@
 import inspect
 import typing
 
-from nicegui import ui
 from stable_baselines3.common.env_util import make_vec_env
 
 from backend.config.config import ExperimentConfig
-from backend.config.storage import as_new_run, load_config
 from util.inspection_helper import (
     load_algorithms,
     load_env_wrappers,
@@ -15,103 +13,60 @@ from util.inspection_helper import (
 from util.utils import get_config_path, make_model_path, replace_empty_strings
 
 
-def build_config(params, sig_params):
-    temp = {}
-    for key in sig_params:
-        val = unwrap_ui_elem(params.pop(0))
-        if val is not None:
-            ann = unwrap_optional(sig_params[key].annotation)
+def build_config(params: dict, sig_params) -> dict:
+    out = {}
+    for name in sig_params:
+        val = params.get(name)
+        if val is None:
+            continue
 
-            if ann is int:
+        ann = unwrap_optional(sig_params[name].annotation)
+
+        if ann is int:
+            val = int(val)
+        elif int in typing.get_args(ann):
+            try:
                 val = int(val)
-            elif int in typing.get_args(ann):
-                try:
-                    val = int(val)
-                except (TypeError, ValueError):
-                    pass
+            except (TypeError, ValueError):
+                pass
 
-            if isinstance(val, dict):
-                temp[key] = {
-                    key: parse_val(value)
-                    for key, value in val.items()
-                    if key and value not in [None, ""]
-                }
-            else:
-                temp[key] = parse_val(val)
-    return temp
-
-
-def build_wrapper_config(params: list, env_wrappers: dict):
-    wrappers = load_env_wrappers()
-    while True:
-        next = params[0]
-        if isinstance(next, ui.checkbox):
-            trimmed_name = next.text.removeprefix("Enable ")
-            if trimmed_name in wrappers and unwrap_ui_elem(params.pop(0)):
-                wrapper_params = inspect.signature(wrappers[trimmed_name]).parameters
-                env_wrappers[trimmed_name] = build_config(params, wrapper_params)
+        if isinstance(val, dict):
+            out[name] = {
+                key: parse_val(value)
+                for key, value in val.items()
+                if key and value not in [None, ""]
+            }
         else:
-            break
-
-
-def unwrap_ui_elem(elem):
-    if isinstance(elem, ui.select) and hasattr(elem, "noise_sigma"):
-        if not elem.value:
-            return None
-        spec = {"type": elem.value, "sigma": elem.noise_sigma.value}
-        if elem.value == "OrnsteinUhlenbeckActionNoise":
-            spec["theta"] = elem.noise_theta.value
-        return spec
-
-    if isinstance(
-        elem, (ui.input, ui.checkbox, ui.number, ui.textarea, ui.select, ui.input_chips)
-    ):
-        return elem.value
-    if isinstance(elem, ui.label):
-        return elem.text
-    if isinstance(elem, ui.aggrid):
-        return {row["key"]: row["value"] for row in elem.options["rowData"]}
-
-    raise ValueError(f"Not a known ui element: {type(elem).__name__}")
+            out[name] = parse_val(val)
+    return out
 
 
 class ConfigBuilder:
     @staticmethod
-    def write_config(params: list):
-        conf = {}
+    def build(raw: dict):
+        wrappers = load_env_wrappers()
         try:
-            config_path = unwrap_ui_elem(params.pop(0))
-            new_run = unwrap_ui_elem(params.pop(0))
-            if config_path is not None:
-                cfg = load_config(config_path)
-                return as_new_run(cfg) if new_run else cfg
-            conf["env_param"] = {}
-            env_params = inspect.signature(make_vec_env).parameters
-            conf["env_param"] = conf["env_param"] | build_config(params, env_params)
-            env_wrappers = conf["env_wrappers"] = {}
-            build_wrapper_config(params, env_wrappers)
-            conf["model_param"] = {}
-            conf["algorithm"] = unwrap_ui_elem(params.pop(0))
-            milestones = unwrap_ui_elem(params.pop(0))
-            conf["milestones"] = (
-                sorted(milestones) if isinstance(milestones, list) else None
-            )
-            conf["total_timesteps"] = unwrap_ui_elem(params.pop(0))
-            conf["save_replay_buffer"] = unwrap_ui_elem(params.pop(0))
-            conf["callback_params"] = {}
-            conf["callback_params"]["eval_freq"] = unwrap_ui_elem(params.pop(0))
-            conf["callback_params"]["n_eval_episodes"] = unwrap_ui_elem(params.pop(0))
-            conf["callback_params"]["deterministic"] = unwrap_ui_elem(params.pop(0))
-            model_params = inspect.signature(
-                load_algorithms()[conf["algorithm"]]
-            ).parameters
-            conf["model_param"] = conf["model_param"] | build_config(
-                params, model_params
-            )
+            algo = raw["algorithm"]
+            conf = raw | {
+                "env_param": build_config(
+                    raw["env_param"], inspect.signature(make_vec_env).parameters
+                ),
+                "env_wrappers": {
+                    name: build_config(
+                        values, inspect.signature(wrappers[name]).parameters
+                    )
+                    for name, values in raw["env_wrappers"].items()
+                },
+                "model_param": build_config(
+                    raw["model_param"],
+                    inspect.signature(load_algorithms()[algo]).parameters,
+                ),
+                "milestones": sorted(raw["milestones"], key=int)
+                if raw["milestones"]
+                else None,
+            }
             conf["model_path"] = make_model_path(
-                conf["env_param"]["env_id"],
-                conf["algorithm"],
-                conf["model_param"]["policy"],
+                conf["env_param"]["env_id"], algo, conf["model_param"]["policy"]
             )
         except Exception as e:
             raise RuntimeError(f"Error while building config: {e}") from e

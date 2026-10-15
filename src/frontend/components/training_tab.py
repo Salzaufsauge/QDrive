@@ -4,7 +4,7 @@ from pathlib import Path
 from nicegui import ui
 
 from backend.config.builder import ConfigBuilder
-from backend.config.storage import load_config
+from backend.config.storage import as_new_run, load_config
 from backend.controller import Controller
 from frontend.components.config_loader import ConfigLoader
 from frontend.components.env_tab import EnvTab
@@ -39,13 +39,6 @@ class TrainingTab:
         self.logging_broker = logging_broker
 
         self.model_container = None
-
-    def setup_config(self, *params):
-        try:
-            self.config = ConfigBuilder.write_config(list(params))
-        except Exception as e:
-            ui.notify(f"Error: {e}", type="negative")
-            raise
 
     def get_training_state(self):
         alive, run_id, run_type, run_config = self.controller.get_run_snapshot()
@@ -116,7 +109,7 @@ class TrainingTab:
         try:
             self.config = load_config(config_path)
             self.config_loader.load_label.set_visibility(True)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             ui.notify(f"Error: {e}", type="negative")
             return
 
@@ -182,12 +175,22 @@ class TrainingTab:
         ui.context.client.on_delete(handle_on_delete)
 
     def train(self):
-        self.setup_config(
-            *[self.config_loader.config, self.config_loader.new_run],
-            *self.env_tab.env_params,
-            *self.wrapper_tab.wrapper_params,
-            *self.model_tab.model_params,
-        )
+        loader = self.config_loader
+        try:
+            if loader.config.value is not None:
+                cfg = load_config(Path(loader.config.value))
+                self.config = as_new_run(cfg) if loader.new_run.value else cfg
+            else:
+                self.config = ConfigBuilder.build(
+                    {
+                        "env_param": self.env_tab.values(),
+                        "env_wrappers": self.wrapper_tab.values(),
+                        **self.model_tab.values(),
+                    }
+                )
+        except Exception as e:  # noqa: BLE001
+            ui.notify(f"Error: {e}", type="negative")
+            return
 
         self.controller.start_training(self.config)
         self.get_training_state()
